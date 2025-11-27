@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen>
                         MyStrings.liveTV, RouteHelper.allLiveTVScreen),
                     _buildHorizontalList(
                       Colors.redAccent,
-                      "Live Channel",
+                      "Live Channe;l",
                     ),
 
                     // Section: Movies
