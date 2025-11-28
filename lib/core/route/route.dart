@@ -14,6 +14,9 @@ import 'package:play_lab/view/screens/rent/rent_item_list.dart';
 import 'package:play_lab/view/screens/splash/splash_screen.dart';
 import 'package:play_lab/view/screens/sub_category/sub_category_screen.dart';
 import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/add_deposit_screen.dart';
+import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/payement_method.dart';
+import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/top_upscree.dart';
+import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/wallet_recharge.dart';
 import 'package:play_lab/view/screens/subscribe_plan/subscribe_plan_screen.dart';
 import 'package:play_lab/view/screens/ticket/all_ticket_screen.dart';
 import 'package:play_lab/view/screens/ticket/new_ticket_screen/new_ticket_screen.dart';
@@ -80,9 +83,16 @@ class RouteHelper {
   static const String changePasswordScreen = '/change-password-screen';
   static const String subscribeScreen = '/subscribe-screen';
   static const String depositScreen = '/deposit-screen';
+  static const String walletRecharge = '/walletrecharge-screen';
+
+  static const String paymentMethodScreen = '/paymentmethod-screen';
+
+  static const String walletTopUpScreen = '/wallettop-screen';
+
   static const String myWatchHistoryScreen = '/history-screen';
   static const String paymentHistoryScreen = '/payment-screen';
   static const String privacyScreen = '/privacy-screen';
+  static const String payementLogScreen = '/paymentlog-screen';
 
   //other
   static const String movieDetailsScreen = '/movie-details-screen';
@@ -115,7 +125,7 @@ class RouteHelper {
     GetPage(name: onboardScreen, page: () => const OnBoardingScreen()),
     GetPage(name: allMovieScreen, page: () => const AllMovieScreen()),
     GetPage(name: allEpisodeScreen, page: () => const AllEpisodeScreen()),
-
+    GetPage(name: paymentMethodScreen, page: () => const PaymentMethodScreen()),
     //nav
     // GetPage(name: customWebviewScreen, page: () => CustomWebViewScreen(redirectUrl: Get.arguments)),
     GetPage(name: privacyScreen, page: () => const PrivacyScreen()),
@@ -128,9 +138,12 @@ class RouteHelper {
     GetPage(
         name: changePasswordScreen, page: () => const ChangePasswordScreen()),
     GetPage(name: paymentHistoryScreen, page: () => const PaymentLogsScreen()),
+    GetPage(name: payementLogScreen, page: () => const PaymentLogsScreen()),
 
     //auth
     GetPage(name: loginScreen, page: () => const LoginScreen()),
+    GetPage(name: walletRecharge, page: () => const WalletRechargeScreen()),
+    GetPage(name: walletTopUpScreen, page: () => const WalletTopUpScreen()),
     GetPage(name: registrationScreen, page: () => const RegistrationScreen()),
     GetPage(
         name: emailVerificationScreen,

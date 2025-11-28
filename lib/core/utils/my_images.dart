@@ -27,7 +27,12 @@ class MyImages {
   static const String linkedinIcon = "assets/images/social/linkedin.png";
   static const String gmailIcon = "assets/images/google.png";
   static const String emailVerifyImage = "assets/images/message.png";
-  //side nav icon
+  //side nav icown
   static const String sideNameRentImage = "assets/images/rentMovie.png";
   static const String reelsImage = "assets/images/reels.png";
+  static const String walletImage = "assets/images/wallet.png";
+  static const String khaltiImage = "assets/images/khalti.png";
+  static const String esewaImage = "assets/images/esewa.png";
+  static const String fonepayImage = "assets/images/fonepay.png";
+  static const String stripeImage = "assets/images/stripe.png";
 }

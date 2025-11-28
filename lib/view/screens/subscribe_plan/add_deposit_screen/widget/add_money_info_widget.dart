@@ -23,11 +23,21 @@ class AddMoneyInfoWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CustomRow(showImage: true, firstText: MyStrings.amount, lastText: "${controller.mainAmount.toString()} ${controller.currency}"),
+            CustomRow(
+                showImage: true,
+                firstText: MyStrings.balance,
+                lastText:
+                    "${controller.mainAmount.toString()} ${controller.currency}"),
             const CustomDivider(space: Dimensions.space15),
-            CustomRow(showImage: true, firstText: MyStrings.charge, lastText: controller.charge),
+            CustomRow(
+                showImage: true,
+                firstText: MyStrings.charge,
+                lastText: controller.charge),
             const CustomDivider(space: Dimensions.space15),
-            CustomRow(showImage: true, firstText: MyStrings.payable, lastText: controller.payableText),
+            CustomRow(
+                showImage: true,
+                firstText: MyStrings.payable,
+                lastText: controller.payableText),
           ],
         ),
       ),

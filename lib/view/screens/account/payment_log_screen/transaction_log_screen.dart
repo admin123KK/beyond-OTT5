@@ -1,15 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/view/components/no_data_widget.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/widget/payment_log_list_item/payment_log_list_item.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import '../../../../core/utils/my_color.dart';
 import '../../../../data/controller/payment_log/deposit_controller.dart';
-import '../../../../data/enum/navigation_item.dart';
 import '../../../../data/repo/deposit_repo/deposit_repo.dart';
 import '../../../../data/services/api_service.dart';
 import '../../../components/app_bar/custom_appbar.dart';
-import '../../../components/nav_drawer/custom_nav_drawer.dart';
 
 class PaymentLogsScreen extends StatefulWidget {
   const PaymentLogsScreen({super.key});
@@ -45,7 +44,7 @@ class _PaymentLogsScreenState extends State<PaymentLogsScreen> {
     Get.put(DepositController(depositRepo: Get.find()));
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NavigationDrawerWidget.navigationItem = NavigationItem.payment;
+      // NavigationDrawerWidget.navigationItem = NavigationItem.payment;
       Get.find<DepositController>().beforeInitLoadData();
       _controller.addListener(_scrollListener);
     });
@@ -59,12 +58,15 @@ class _PaymentLogsScreenState extends State<PaymentLogsScreen> {
         appBar: const CustomAppBar(title: MyStrings.paymentHistory),
         body: controller.isLoading
             ? const SizedBox(
-                child: Center(child: CircularProgressIndicator(color: MyColor.primaryColor)),
+                child: Center(
+                    child:
+                        CircularProgressIndicator(color: MyColor.primaryColor)),
               )
             : controller.depositList.isEmpty
                 ? const NoDataFoundScreen(message: MyStrings.noTrxFound)
                 : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     child: GetBuilder<DepositController>(
                       builder: (controller) => ListView.builder(
                         itemCount: controller.depositList.length + 1,

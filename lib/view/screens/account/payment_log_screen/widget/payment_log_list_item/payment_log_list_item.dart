@@ -4,18 +4,22 @@ import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/helper/date_converter.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/view/components/divider/custom_divider.dart';
-import '../../../../../../core/helper/string_format_helper.dart';
 import '../../../../../../../core/utils/my_color.dart';
-import '../../.././../../../core/utils/dimensions.dart';
+import '../../../../../../core/helper/string_format_helper.dart';
 import '../../../../../../core/utils/styles.dart';
 import '../../../../../../data/controller/payment_log/deposit_controller.dart';
 import '../../../../../../data/model/deposit/deposit_history_main_response_model.dart';
 import '../../../../../../view/components/buttons/custom_round_border_shape.dart';
 import '../../../../../../view/components/buttons/custom_rounded_button.dart';
 import '../../../../../../view/components/custom_rounded_icon_button.dart';
+import '../../.././../../../core/utils/dimensions.dart';
 
 class DepositHistoryListItem extends StatelessWidget {
-  const DepositHistoryListItem({super.key, required this.listItem, required this.index, required this.currency});
+  const DepositHistoryListItem(
+      {super.key,
+      required this.listItem,
+      required this.index,
+      required this.currency});
   final HistoryData listItem;
   final int index;
   final String currency;
@@ -59,7 +63,8 @@ class DepositHistoryListItem extends StatelessWidget {
                         : planName2.replaceAll('-', ' ').toTitleCase(),
                 isRentItem: plan != null ? false : true,
                 rentItemFunction: () {
-                  Get.toNamed(RouteHelper.movieDetailsScreen, arguments: [listItem.subscription?.item?.id, -1]);
+                  Get.toNamed(RouteHelper.movieDetailsScreen,
+                      arguments: [listItem.subscription?.item?.id, -1]);
                 },
               ),
               const SizedBox(height: 10),
@@ -67,12 +72,19 @@ class DepositHistoryListItem extends StatelessWidget {
               const SizedBox(height: 10),
               buildRow(
                 header: MyStrings.gateway,
-                value: listItem.gateway != null ? (listItem.gateway?.name ?? '') : (listItem.methodCode == '-1' ? MyStrings.googlePay : MyStrings.applePay),
+                value: listItem.gateway != null
+                    ? (listItem.gateway?.name ?? '')
+                    : (listItem.methodCode == '-1'
+                        ? MyStrings.googlePay
+                        : MyStrings.applePay),
               ),
               const SizedBox(height: 10),
               const Divider(height: 1, color: MyColor.colorHint),
               const SizedBox(height: 10),
-              buildRow(header: MyStrings.amount, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.amount ?? '')} ${listItem.methodCurrency}'),
+              buildRow(
+                  header: MyStrings.balance,
+                  value:
+                      '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.amount ?? '')} ${listItem.methodCurrency}'),
               const SizedBox(height: 10),
               const Divider(height: 1, color: MyColor.colorHint),
               const SizedBox(height: 10),
@@ -86,7 +98,8 @@ class DepositHistoryListItem extends StatelessWidget {
                             ? MyStrings.rejected
                             : '',
                 isStatus: true,
-                status: listItem.status != null ? listItem.status.toString() : '1',
+                status:
+                    listItem.status != null ? listItem.status.toString() : '1',
               ),
               const SizedBox(height: 10),
             ],
@@ -131,7 +144,10 @@ class DepositHistoryListItem extends StatelessWidget {
                   child: Text(
                     value.tr,
                     textAlign: TextAlign.end,
-                    style: mulishSemiBold.copyWith(color: MyColor.primaryColor, decoration: TextDecoration.underline, decorationColor: MyColor.primaryColor),
+                    style: mulishSemiBold.copyWith(
+                        color: MyColor.primaryColor,
+                        decoration: TextDecoration.underline,
+                        decorationColor: MyColor.primaryColor),
                   ),
                 ),
               )
@@ -158,7 +174,8 @@ class DepositHistoryListItem extends StatelessWidget {
                         child: Text(
                           value.tr,
                           textAlign: TextAlign.end,
-                          style: mulishRegular.copyWith(color: MyColor.colorWhite),
+                          style:
+                              mulishRegular.copyWith(color: MyColor.colorWhite),
                         ),
                       )
       ],
@@ -184,7 +201,9 @@ class DepositHistoryListItem extends StatelessWidget {
               children: [
                 Text(
                   MyStrings.details.tr,
-                  style: mulishBold.copyWith(fontSize: Dimensions.fontLarge, color: MyColor.colorWhite),
+                  style: mulishBold.copyWith(
+                      fontSize: Dimensions.fontLarge,
+                      color: MyColor.colorWhite),
                 ),
                 SizedBox(
                   height: 30,
@@ -204,15 +223,38 @@ class DepositHistoryListItem extends StatelessWidget {
             const SizedBox(
               height: 16,
             ),
-            buildDialogContentRow(header: MyStrings.amount, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.amount ?? '')} $siteCurrency'),
-            buildDialogContentRow(header: MyStrings.charge, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.charge ?? '')} $siteCurrency'),
-            buildDialogContentRow(header: MyStrings.afterCharge, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.finalAmo ?? '')} $siteCurrency'),
-            buildDialogContentRow(header: MyStrings.conversionRate, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.rate ?? '')} ${listItem.methodCurrency}'),
-            buildDialogContentRow(header: MyStrings.payableAmount, value: '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.finalAmo ?? '')} ${listItem.methodCurrency}'),
+            buildDialogContentRow(
+                header: MyStrings.balance,
+                value:
+                    '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.amount ?? '')} $siteCurrency'),
+            buildDialogContentRow(
+                header: MyStrings.charge,
+                value:
+                    '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.charge ?? '')} $siteCurrency'),
+            buildDialogContentRow(
+                header: MyStrings.afterCharge,
+                value:
+                    '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.finalAmo ?? '')} $siteCurrency'),
+            buildDialogContentRow(
+                header: MyStrings.conversionRate,
+                value:
+                    '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.rate ?? '')} ${listItem.methodCurrency}'),
+            buildDialogContentRow(
+                header: MyStrings.payableAmount,
+                value:
+                    '${StringConverter.twoDecimalPlaceFixedWithoutRounding(listItem.finalAmo ?? '')} ${listItem.methodCurrency}'),
             if (listItem.status == '3') ...[
-              buildDialogContentRow(header: MyStrings.adminFeedback, value: listItem.adminFeedback ?? '', needBorder: true),
+              buildDialogContentRow(
+                  header: MyStrings.adminFeedback,
+                  value: listItem.adminFeedback ?? '',
+                  needBorder: true),
             ],
-            buildDialogContentRow(header: MyStrings.date, value: DateConverter.formatValidityDate(DateTime.tryParse(listItem.date ?? DateTime.now().toIso8601String()).toString()), needBorder: false),
+            buildDialogContentRow(
+                header: MyStrings.date,
+                value: DateConverter.formatValidityDate(DateTime.tryParse(
+                        listItem.date ?? DateTime.now().toIso8601String())
+                    .toString()),
+                needBorder: false),
           ],
         ),
       ),

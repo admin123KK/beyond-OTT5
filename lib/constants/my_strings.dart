@@ -2,10 +2,13 @@ import '../data/model/language/language_model.dart';
 
 class MyStrings {
   static const String homeIOSBanner = "ca-app-pub-3940256099942544/2934735716";
-  static const String homeAndroidBanner = "ca-app-pub-3940256099942544/6300978111";
+  static const String homeAndroidBanner =
+      "ca-app-pub-3940256099942544/6300978111";
 
-  static const String videoDetailsInterstitialAndroidAds = "ca-app-pub-3940256099942544/1033173712";
-  static const String videoDetailsInterstitialIOSAds = "ca-app-pub-3940256099942544/1033173712";
+  static const String videoDetailsInterstitialAndroidAds =
+      "ca-app-pub-3940256099942544/1033173712";
+  static const String videoDetailsInterstitialIOSAds =
+      "ca-app-pub-3940256099942544/1033173712";
 
   static const String allEpisodeIOSBanner = homeIOSBanner;
   static const String allEpisodeAndroidBanner = homeAndroidBanner;
@@ -29,7 +32,8 @@ class MyStrings {
   static const String joinParty = "Join Party";
   static const String join = "Join";
   static const String createParty = "Create Party";
-  static const String createPartySubText = "Watch movies together with your friends and families.";
+  static const String createPartySubText =
+      "Watch movies together with your friends and families.";
 
   static const String google = "Google";
   static const String facebook = "Facebook";
@@ -44,18 +48,25 @@ class MyStrings {
   static const String tvSeries = "TV Series";
   static const String selectALanguage = "Select a language";
   static const String emailOtpSuccessMessage = 'Email verified successfully';
-  static const String profileUpdatedSuccessfully = 'Profile Updated Successfully';
+  static const String profileUpdatedSuccessfully =
+      'Profile Updated Successfully';
   static const String somethingWentWrong = 'something went wrong';
   static const String appExitMsg = 'Do you want to exit from the app?';
-  static const String deleteMsg = 'Are you sure you want to delete your account?';
+  static const String deleteMsg =
+      'Are you sure you want to delete your account?';
   static const String passwordChanged = "Password Changed";
   static const String failedToChangedPassword = "Failed to Change Password";
-  static const String viaEmailVerify = "We've sent you an access code via email for email verification";
-  static const String smsVerificationMsg = "We have sent you an access code to your phone number for sms verification";
+  static const String viaEmailVerify =
+      "We've sent you an access code via email for email verification";
+  static const String smsVerificationMsg =
+      "We have sent you an access code to your phone number for sms verification";
 
-  static const String videoSourceError = "Video source doesn't support by this player.";
-  static const String platformSpecificError = "There was an error playing the video. Please try again later.";
-  static const String unknownVideoError = "An unknown error occurred. Please try again later.";
+  static const String videoSourceError =
+      "Video source doesn't support by this player.";
+  static const String platformSpecificError =
+      "There was an error playing the video. Please try again later.";
+  static const String unknownVideoError =
+      "An unknown error occurred. Please try again later.";
 
   static const String nowYouHaveToPay = "Now you've to pay";
   static const String youAreRequestedForPlan = "You're requested for plan";
@@ -69,7 +80,7 @@ class MyStrings {
   static const String planName = "Plan Name";
   static const String trxId = "Trx Id";
 
-  static const String amount = "Amount";
+  static const String balance = "My Balance";
   static const String charge = "Charge";
   static const String afterCharge = "After Charge";
   static const String subtitles = "SubTitles";
@@ -85,8 +96,10 @@ class MyStrings {
   static const String failToRemoveInWishlist = "Fail to Remove in Wishlist";
 
   static const String logoutSuccessMsg = 'You have successfully logged out';
-  static const String deleteSuccessMsg = 'You have successfully deleted account';
-  static const String deleteFailMsg = 'Account deletion failed. Please contact the support team';
+  static const String deleteSuccessMsg =
+      'You have successfully deleted account';
+  static const String deleteFailMsg =
+      'Account deletion failed. Please contact the support team';
   static const String addPayment = 'Add Payment';
   static const String paymentNow = 'Payment Now';
   static const String free = 'Free';
@@ -96,8 +109,10 @@ class MyStrings {
   static const String searchResult = 'Search Result';
   static const String resetPassword = 'Reset Password';
   static const String weHaveSent = "We have sent a verification code to";
-  static const String resetLabelText = "Your account is verified successfully . Now you can change your password."; /*"Your account is verified successfully. Now you can change your password.Please enter a strong password and don't share it with anyone";*/
-  static const String toRecover = "To recover your account please provide your email or username to find your account";
+  static const String resetLabelText =
+      "Your account is verified successfully . Now you can change your password."; /*"Your account is verified successfully. Now you can change your password.Please enter a strong password and don't share it with anyone";*/
+  static const String toRecover =
+      "To recover your account please provide your email or username to find your account";
   static const String yourEmailAddress = "your email address";
   static const String submit = "Submit";
   static const String forgetPassword = "Forget Password";
@@ -115,15 +130,18 @@ class MyStrings {
   static const String paymentMethod = 'Payment Method ';
   static const String invalidAmount = 'Invalid amount';
   static const String invalidPaymentUrl = 'Invalid payment url';
-  static const String failedToBuySubscriptionPlan = "Failed to buy subscribe plan";
+  static const String failedToBuySubscriptionPlan =
+      "Failed to buy subscribe plan";
   static const String failedToUpdateProfile = "Fail to update profile";
   static const String requestFailed = "Request Failed";
   static const String requestSuccess = "Request Success";
 
   static const String updateProfile = "Update Profile";
-  static const String guestUserAlert = "Guest user are not eligible to access this section,Please login first";
+  static const String guestUserAlert =
+      "Guest user are not eligible to access this section,Please login first";
   static const String youHaveLoggedOut = "You have successfully logged out";
-  static const String plsLoginAndSubscribeToWatch = "Please Login & Subscribe To Watch";
+  static const String plsLoginAndSubscribeToWatch =
+      "Please Login & Subscribe To Watch";
 
   static const String noAccessTokenFound = 'No access token found';
   static const String plsSubscribeToWatch = "Please Subscribe To Watch";
@@ -180,6 +198,7 @@ class MyStrings {
   static const String freeZone = "Free Zone";
   static const String alreadyInWishlist = "Already in wishlist";
   static const String subscribePLan = "Subscribe Plan";
+  static const String walletRecharge = "Wallet Recharge";
   static const String myHistory = "Watch History";
 
   static const String changePassword = "Change Password";
@@ -267,7 +286,8 @@ class MyStrings {
   static const String kShortUserNameError = "Username must be 6 character";
   static const String kUserNameNullError = "Please enter username";
   static const String kPhoneNumberNullError = "Please enter your phone number";
-  static const String currentPassNullError = "Please enter your current password";
+  static const String currentPassNullError =
+      "Please enter your current password";
   static const String phoneNumber = "Phone Number";
   static const String verify = 'Verify';
   static const String passVerification = 'Password Verification';
@@ -296,20 +316,27 @@ class MyStrings {
   static const String rentedItems = "Rented Items";
   static const String closeParty = "Close Party";
   static const String leaveParty = "Leave Party";
-  static const String successfullyCopiedToClipboard = "Successfully copied to clipboard";
+  static const String successfullyCopiedToClipboard =
+      "Successfully copied to clipboard";
   static const String plsEnterPartyCode = "Please enter party code";
   static const String partyCodeEnterMsg = "Enter your party code";
   static const String joinAParty = "Join a Party";
   static const String paymentMethods = "Payment Methods";
-  static const String watchPartyErrorMsg = "Failed to retrieve watch party history";
-  static const String joinRequestPendingMsg = "Your request is pending. Wait until the host user accepts";
+  static const String watchPartyErrorMsg =
+      "Failed to retrieve watch party history";
+  static const String joinRequestPendingMsg =
+      "Your request is pending. Wait until the host user accepts";
   static const String youAreHostThisParty = "You Are Host This Party";
   static const String yourHostThisParty = "Your Host This Party";
-  static const String closePartyMsg = "Are you sure you want to close this party?";
-  static const String leavePartyMsg = "Are you sure you want to Leave this party?";
-  static const String removeUserPartyMsg = "Are you sure you want to remove this user?";
+  static const String closePartyMsg =
+      "Are you sure you want to close this party?";
+  static const String leavePartyMsg =
+      "Are you sure you want to Leave this party?";
+  static const String removeUserPartyMsg =
+      "Are you sure you want to remove this user?";
   static const String alreadySubscribed = "Already subscribed";
-  static const String rentSubscriptionMsg = "Please purchase this rental item for ";
+  static const String rentSubscriptionMsg =
+      "Please purchase this rental item for ";
   static const String payNow = 'Pay Now';
 
   static const String googlePay = 'Google Pay';
@@ -324,7 +351,8 @@ class MyStrings {
   static const String minSixChar = "Min of 6 characters";
   static const String enterYourUsername = 'Enter your username';
   static const String confirmationAlert = 'Confirmation Alert!';
-  static const String invalidPassMsg = "Password must be contain 1 special character and number";
+  static const String invalidPassMsg =
+      "Password must be contain 1 special character and number";
 
   static const String searchCountry = 'Search Country';
   static const String selectACountry = "Select a country";
@@ -375,7 +403,8 @@ class MyStrings {
   static const String admin = "Admin";
   static const String replyTicketEmptyMsg = "Reply ticket can't be empty";
   static const String ticketCreateSuccessfully = 'Ticket created successfully';
-  static const String cancelTicketMessage = 'Are you sure you want to close the ticket';
+  static const String cancelTicketMessage =
+      'Are you sure you want to close the ticket';
   static const String or_ = 'OR';
   static const String supportedFileHint = "Supported file type:jpg,xlxs,pdf";
   static const String enterFile = "Enter file";
@@ -383,9 +412,12 @@ class MyStrings {
   static const String loginFailedTryAgain = 'Login failed,please try again';
   static const String attactmentError = "You can add Maximum 5 attachment";
 
-  static RegExp emailValidatorRegExp = RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+  static RegExp emailValidatorRegExp =
+      RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
   static List<MyLanguageModel> myLanguages = [
-    MyLanguageModel(languageName: 'English', countryCode: 'US', languageCode: 'en'),
-    MyLanguageModel(languageName: 'Arabic', countryCode: 'SA', languageCode: 'ar'),
+    MyLanguageModel(
+        languageName: 'English', countryCode: 'US', languageCode: 'en'),
+    MyLanguageModel(
+        languageName: 'Arabic', countryCode: 'SA', languageCode: 'ar'),
   ];
 }
