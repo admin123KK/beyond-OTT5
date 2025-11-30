@@ -26,7 +26,7 @@ class NavigationDrawerWidget extends StatelessWidget {
     String imagePath = loginRepo.sharedPreferences
             .getString(SharedPreferenceHelper.userImageKey) ??
         '';
-    String balance = "NRS. 0/-"; // You can make this dynamic later
+    String balance = "NRS. 0/-"; // Make dynamic if needed
 
     return Drawer(
       backgroundColor: const Color(0xFF1E1E2A),
@@ -147,8 +147,8 @@ class NavigationDrawerWidget extends StatelessWidget {
                   onTap: () => Get.toNamed(RouteHelper.profileScreen),
                 ),
                 _buildDrawerItem(
-                  icon: Icons.contact_support_outlined,
-                  title: MyStrings.contactUs,
+                  icon: Icons.support_agent_sharp,
+                  title: MyStrings.supportTicket,
                   onTap: () => Get.toNamed(RouteHelper.allTicketScreen),
                 ),
                 _buildDrawerItem(
@@ -160,13 +160,13 @@ class NavigationDrawerWidget extends StatelessWidget {
             ),
           ),
 
-          // Sign Out Button
+          // Logout Button with Confirmation Dialog
           Padding(
             padding: const EdgeInsets.all(20),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () => _showLogoutDialog(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MyColor.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -187,6 +187,75 @@ class NavigationDrawerWidget extends StatelessWidget {
     );
   }
 
+  // Custom Logout Confirmation Dialog
+  void _showLogoutDialog(BuildContext context) {
+    final loginRepo = Get.find<LoginRepo>();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: MyColor.primaryColor.withOpacity(0.3)),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: MyColor.primaryColor, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              "Confirm Logout",
+              style: mulishBold.copyWith(color: Colors.white, fontSize: 20),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to logout from your account?",
+          style: mulishRegular.copyWith(color: Colors.white70, fontSize: 16),
+        ),
+        actions: [
+          // Cancel Button
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              "Cancel",
+              style: mulishSemiBold.copyWith(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+          ),
+
+          // Confirm Logout Button
+          ElevatedButton(
+            onPressed: () async {
+              Get.back(); // Close dialog
+
+              // Perform logout (clear tokens, user data, etc.)
+              // await loginRepo.logout();
+
+              // Navigate to Login Screen and remove all previous routes
+              Get.offAllNamed(RouteHelper.loginScreen);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MyColor.primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: Text(
+              "Logout",
+              style: mulishSemiBold.copyWith(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Drawer Item Builder
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,
@@ -201,11 +270,12 @@ class NavigationDrawerWidget extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.white38),
       onTap: () {
-        Get.back(); // Close drawer
+        Get.back(); // Close drawer first
         onTap();
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       hoverColor: MyColor.primaryColor.withOpacity(0.1),
+      selectedTileColor: MyColor.primaryColor.withOpacity(0.2),
     );
   }
 }

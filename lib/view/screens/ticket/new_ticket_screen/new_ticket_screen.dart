@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:play_lab/constants/my_strings.dart';
-import 'package:play_lab/core/utils/dimensions.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_icons.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/data/controller/support/new_ticket_controller.dart';
-import 'package:play_lab/data/repo/support/support_repo.dart';
-import 'package:play_lab/data/services/api_service.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/circle_icon_button.dart';
@@ -24,222 +20,256 @@ class NewTicketScreen extends StatefulWidget {
 }
 
 class _NewTicketScreenState extends State<NewTicketScreen> {
-  @override
-  void initState() {
-    Get.put(ApiClient(sharedPreferences: Get.find()));
-    Get.put(SupportRepo(apiClient: Get.find()));
-    Get.put(NewTicketController(repo: Get.find()));
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+  final FocusNode _messageFocusNode = FocusNode();
 
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {});
-  }
+  String? _selectedPriority = "Medium";
+  final List<String> _priorityList = ["Low", "Medium", "High", "Urgent"];
+
+  final List<Map<String, dynamic>> _attachments = [];
 
   @override
   void dispose() {
+    _subjectController.dispose();
+    _messageController.dispose();
+    _messageFocusNode.dispose();
     super.dispose();
   }
 
+  void _showSuccess() {
+    CustomSnackbar.showCustomSnackbar(
+      errorList: [],
+      msg: [MyStrings.ticketCreateSuccessfully],
+      isError: false,
+    );
+    // Clear form
+    _subjectController.clear();
+    _messageController.clear();
+    setState(() {
+      _selectedPriority = "Medium";
+      _attachments.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<NewTicketController>(
-      builder: (controller) => Scaffold(
-        backgroundColor: MyColor.bgColor,
-        appBar: CustomAppBar(
-          title: MyStrings.addNewTicket.tr,
-        ),
-        body: controller.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.all(10),
-                  width: MediaQuery.of(context).size.width,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      LabelText(text: MyStrings.subject.tr),
-                      CustomTextField(
-                        hintText: MyStrings.enterYourSubject.tr,
-                        controller: controller.subjectController,
-                        isPassword: false,
-                        isShowSuffixIcon: false,
-                        nextFocus: controller.messageFocusNode,
-                        onSuffixTap: () {},
-                        onChanged: (value) {},
+    return Scaffold(
+      backgroundColor: MyColor.bgColor,
+      appBar: CustomAppBar(title: MyStrings.addNewTicket.tr),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
+
+            // Subject
+            LabelText(text: MyStrings.subject.tr),
+            const SizedBox(height: 8),
+            CustomTextField(
+              hintText: MyStrings.enterYourSubject.tr,
+              controller: _subjectController,
+              isPassword: false,
+              nextFocus: _messageFocusNode,
+              onChanged: null,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Priority
+            LabelText(text: MyStrings.priority.tr),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: MyColor.textFieldColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: MyColor.borderColor, width: 1),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedPriority,
+                  dropdownColor: MyColor.textFieldColor,
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: MyColor.primaryColor),
+                  isExpanded: true,
+                  items: _priorityList.map((priority) {
+                    return DropdownMenuItem(
+                      value: priority,
+                      child: Text(
+                        priority,
+                        style: mulishSemiBold.copyWith(
+                            color: MyColor.getTextColor()),
                       ),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      LabelText(text: MyStrings.priority.tr),
-                      const SizedBox(height: Dimensions.space5),
-                      DropDownTextFieldContainer(
-                        color: MyColor.textFieldColor,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 20, right: 10),
-                          child: DropdownButton<String>(
-                            dropdownColor: MyColor.textFieldColor,
-                            value: controller.selectedPriority,
-                            elevation: 8,
-                            icon: const Icon(Icons.keyboard_arrow_down),
-                            iconDisabledColor: Colors.grey,
-                            iconEnabledColor: MyColor.primaryColor,
-                            isExpanded: true,
-                            underline: Container(height: 0, color: Colors.deepPurpleAccent),
-                            onChanged: (String? newValue) {
-                              controller.setPriority(newValue);
-                            },
-                            padding: const EdgeInsets.symmetric(vertical: Dimensions.space5),
-                            borderRadius: BorderRadius.circular(0),
-                            items: controller.priorityList.map<DropdownMenuItem<String>>((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(
-                                  value,
-                                  style: mulishRegular.copyWith(fontSize: Dimensions.fontDefault),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      LabelText(text: MyStrings.message.tr),
-                      CustomTextField(
-                        hintText: MyStrings.enterYourMessage.tr,
-                        isPassword: false,
-                        controller: controller.messageController,
-                        maxLines: 5,
-                        focusNode: controller.messageFocusNode,
-                        isShowSuffixIcon: false,
-                        onSuffixTap: () {},
-                        onChanged: (value) {},
-                      ),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      const SizedBox(height: Dimensions.textToTextSpace),
-                      LabelText(text: MyStrings.attachments.tr),
-                      InkWell(
-                        onTap: () {
-                          if (controller.attachmentList.length < 5) {
-                            controller.pickFile();
-                          } else {
-                            CustomSnackbar.showCustomSnackbar(errorList: [MyStrings.attactmentError], msg: [], isError: true);
-                          }
-                        },
-                        child: CustomTextField(
-                          hintText: MyStrings.enterFile.tr,
-                          inputAction: TextInputAction.done,
-                          isEnabled: false,
-                          isShowSuffixIcon: true,
-                          onChanged: (value) {
-                            return;
-                          },
-                          suffixIcon: InkWell(
-                            onTap: () {
-                              if (controller.attachmentList.length < 5) {
-                                controller.pickFile();
-                              } else {
-                                CustomSnackbar.showCustomSnackbar(errorList: [MyStrings.attactmentError], msg: [], isError: true);
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: Dimensions.space15, vertical: Dimensions.space10),
-                              margin: const EdgeInsets.all(Dimensions.space5),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                color: MyColor.primaryColor,
-                              ),
-                              child: Text(
-                                MyStrings.upload.tr,
-                                style: mulishRegular.copyWith(color: MyColor.colorWhite),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: Dimensions.space5 - 3),
-                      Text(MyStrings.supportedFileHint, style: mulishRegular.copyWith(color: MyColor.bodyTextColor)),
-                      const SizedBox(height: Dimensions.space10),
-                      if (controller.attachmentList.isNotEmpty) ...[
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: List.generate(
-                              controller.attachmentList.length,
-                              (index) => Row(
-                                children: [
-                                  Stack(
-                                    children: [
-                                      Container(
-                                        margin: const EdgeInsets.all(Dimensions.space5),
-                                        decoration: const BoxDecoration(),
-                                        child: controller.isImage(controller.attachmentList[index].path)
-                                            ? ClipRRect(borderRadius: BorderRadius.circular(Dimensions.mediumRadius), child: Image.file(controller.attachmentList[index], width: context.width / 5, height: context.width / 5, fit: BoxFit.cover))
-                                            : controller.isXlsx(controller.attachmentList[index].path)
-                                                ? Container(
-                                                    width: context.width / 5,
-                                                    height: context.width / 5,
-                                                    decoration: BoxDecoration(color: MyColor.colorWhite, borderRadius: BorderRadius.circular(Dimensions.mediumRadius), border: Border.all(color: MyColor.borderColor, width: 1)),
-                                                    child: Center(child: SvgPicture.asset(MyIcons.xlsx, height: 45, width: 45)),
-                                                  )
-                                                : controller.isDoc(controller.attachmentList[index].path)
-                                                    ? Container(
-                                                        width: context.width / 5,
-                                                        height: context.width / 5,
-                                                        decoration: BoxDecoration(color: MyColor.colorWhite, borderRadius: BorderRadius.circular(Dimensions.mediumRadius), border: Border.all(color: MyColor.borderColor, width: 1)),
-                                                        child: Center(child: SvgPicture.asset(MyIcons.doc, height: 45, width: 45)),
-                                                      )
-                                                    : Container(
-                                                        width: context.width / 5,
-                                                        height: context.width / 5,
-                                                        decoration: BoxDecoration(color: MyColor.colorWhite, borderRadius: BorderRadius.circular(Dimensions.mediumRadius), border: Border.all(color: MyColor.borderColor, width: 1)),
-                                                        child: Center(child: SvgPicture.asset(MyIcons.pdfFile, height: 45, width: 45)),
-                                                      ),
-                                      ),
-                                      CircleIconButton(
-                                        onTap: () {
-                                          controller.removeAttachmentFromList(index);
-                                        },
-                                        height: Dimensions.space20,
-                                        width: Dimensions.space20,
-                                        backgroundColor: MyColor.closeRedColor,
-                                        child: const Icon(Icons.close, color: MyColor.colorWhite, size: Dimensions.space12),
-                                      )
-                                    ],
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                      const SizedBox(height: 30),
-                      Center(
-                        child: RoundedButton(
-                          isLoading: controller.submitLoading,
-                          color: MyColor.primaryColor,
-                          text: MyStrings.submit.tr,
-                          press: () {
-                            controller.submit();
-                          },
-                        ),
-                      )
-                    ],
-                  ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => _selectedPriority = value);
+                  },
                 ),
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Message
+            LabelText(text: MyStrings.message.tr),
+            const SizedBox(height: 8),
+            CustomTextField(
+              hintText: MyStrings.enterYourMessage.tr,
+              controller: _messageController,
+              focusNode: _messageFocusNode,
+              maxLines: 6,
+              isPassword: false,
+              onChanged: null,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Attachments
+            LabelText(text: MyStrings.attachments.tr),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                if (_attachments.length < 5) {
+                  _addDummyAttachment(); // Simulate file pick
+                } else {
+                  CustomSnackbar.showCustomSnackbar(
+                    errorList: [MyStrings.attactmentError],
+                    msg: [],
+                    isError: true,
+                  );
+                }
+              },
+              child: CustomTextField(
+                hintText: MyStrings.upload.tr,
+                isEnabled: false,
+                isShowSuffixIcon: true,
+                suffixIcon: Container(
+                  margin: const EdgeInsets.all(6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: MyColor.primaryColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    MyStrings.upload.tr,
+                    style: mulishSemiBold.copyWith(
+                        color: Colors.white, fontSize: 13),
+                  ),
+                ),
+                onChanged: null,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              MyStrings.supportedFileHint,
+              style: mulishRegular.copyWith(
+                  color: MyColor.bodyTextColor, fontSize: 12),
+            ),
+
+            // Attached Files Preview
+            if (_attachments.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 90,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _attachments.length,
+                  itemBuilder: (context, index) {
+                    final file = _attachments[index];
+                    return Stack(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: MyColor.borderColor),
+                          ),
+                          child: Center(
+                            child: SvgPicture.asset(
+                              file["type"] == "image"
+                                  ? MyIcons.pdfFile
+                                  : file["type"] == "pdf"
+                                      ? MyIcons.pdfFile
+                                      : file["type"] == "doc"
+                                          ? MyIcons.doc
+                                          : MyIcons.xlsx,
+                              height: 40,
+                              width: 40,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 8,
+                          child: CircleIconButton(
+                            onTap: () =>
+                                setState(() => _attachments.removeAt(index)),
+                            height: 24,
+                            width: 24,
+                            backgroundColor: MyColor.closeRedColor,
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 40),
+
+            // Submit Button
+            Center(
+              child: RoundedButton(
+                text: MyStrings.submit.tr,
+                press: () {
+                  if (_subjectController.text.isEmpty ||
+                      _messageController.text.isEmpty) {
+                    CustomSnackbar.showCustomSnackbar(
+                      errorList: [MyStrings.pleaseFillOutTheField],
+                      msg: [],
+                      isError: true,
+                    );
+                  } else {
+                    _showSuccess();
+                  }
+                },
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
-}
 
-class DropDownTextFieldContainer extends StatelessWidget {
-  final Widget child;
-  final Color color;
-  const DropDownTextFieldContainer({super.key, required this.child, this.color = MyColor.primaryColor});
+  // Simulate file attachment (for demo)
+  void _addDummyAttachment() {
+    final types = ["image", "pdf", "doc", "xlsx"];
+    final names = ["screenshot.jpg", "invoice.pdf", "report.docx", "data.xlsx"];
+    final random = DateTime.now().millisecondsSinceEpoch % 4;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(Dimensions.cardRadius), border: Border.all(color: MyColor.gbr, width: .5)), child: child);
+    setState(() {
+      _attachments.add({
+        "name": names[random],
+        "type": types[random],
+      });
+    });
+
+    CustomSnackbar.showCustomSnackbar(
+      errorList: [],
+      msg: ["${names[random]} attached"],
+      isError: false,
+    );
   }
 }

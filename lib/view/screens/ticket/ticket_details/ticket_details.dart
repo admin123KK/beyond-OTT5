@@ -1,24 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:play_lab/constants/my_strings.dart';
-import 'package:play_lab/core/utils/dimensions.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_icons.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/data/controller/support/ticket_details_controller.dart';
-import 'package:play_lab/data/repo/support/support_repo.dart';
-import 'package:play_lab/data/services/api_service.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
-import 'package:play_lab/view/components/buttons/rounded_button.dart';
-import 'package:play_lab/view/components/buttons/rounded_loading_button.dart';
 import 'package:play_lab/view/components/circle_icon_button.dart';
-import 'package:play_lab/view/components/custom_circle_animated_button.dart';
-import 'package:play_lab/view/components/custom_loader/custom_loader.dart';
-import 'package:play_lab/view/components/custom_text_field.dart';
-import 'package:play_lab/view/components/label_text.dart';
 import 'package:play_lab/view/components/show_custom_snackbar.dart';
-import 'package:play_lab/view/screens/ticket/ticket_details/widget/ticket_meassge_widget.dart';
 import 'package:zoom_tap_animation/zoom_tap_animation.dart';
 
 class TicketDetailsScreen extends StatefulWidget {
@@ -29,319 +17,332 @@ class TicketDetailsScreen extends StatefulWidget {
 }
 
 class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
-  String title = "";
+  final TextEditingController _replyController = TextEditingController();
+  final List<Map<String, dynamic>> _attachments = [];
+
+  // Dummy ticket data (passed from previous screen)
+  late String ticketId;
+  late String subject;
+
+  // Dummy conversation history
+  final List<Map<String, dynamic>> dummyMessages = [
+    {
+      "isAdmin": true,
+      "message":
+          "Hello! Thank you for reaching out. Can you please send us a screenshot of the issue?",
+      "time": "2 hours ago",
+      "attachments": []
+    },
+    {
+      "isAdmin": false,
+      "message":
+          "Yes sure, I’m facing login issue after the latest update. Attaching screenshot.",
+      "time": "1 hour ago",
+      "attachments": ["screenshot.jpg"]
+    },
+    {
+      "isAdmin": true,
+      "message":
+          "Thank you! We have identified the bug. Fix will be live in next 24 hours.",
+      "time": "30 min ago",
+      "attachments": []
+    },
+  ];
+
   @override
   void initState() {
-    String ticketId = Get.arguments[0];
-    title = Get.arguments[1];
-    Get.put(ApiClient(sharedPreferences: Get.find()));
-    Get.put(SupportRepo(apiClient: Get.find()));
-    var controller = Get.put(TicketDetailsController(repo: Get.find(), ticketId: ticketId));
-
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      controller.loadData();
+    ticketId = Get.arguments?[0] ?? "TKT-8844";
+    subject = Get.arguments?[1] ?? "Login Problem After Update";
+  }
+
+  void _sendReply() {
+    if (_replyController.text.trim().isEmpty) {
+      CustomSnackbar.showCustomSnackbar(
+        errorList: ["Please write a message"],
+        msg: [],
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() {
+      dummyMessages.insert(0, {
+        "isAdmin": false,
+        "message": _replyController.text,
+        "time": "Just now",
+        "attachments": _attachments.map((e) => e["name"]).toList(),
+      });
+      _replyController.clear();
+      _attachments.clear();
+    });
+
+    CustomSnackbar.showCustomSnackbar(
+      errorList: [],
+      msg: ["Reply sent successfully"],
+      isError: false,
+    );
+  }
+
+  void _addDummyFile() {
+    final files = ["screenshot.jpg", "log.txt", "error.pdf", "photo.png"];
+    final icons = ["image", "doc", "pdf", "image"];
+    final rand = DateTime.now().millisecond % 4;
+
+    setState(() {
+      _attachments.add({"name": files[rand], "type": icons[rand]});
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: MyStrings.replyTicket,
-      ),
-      body: GetBuilder<TicketDetailsController>(builder: (controller) {
-        return controller.isLoading
-            ? const CustomLoader(
-                isFullScreen: true,
-              )
-            : SingleChildScrollView(
-                padding: Dimensions.padding,
-                child: Container(
-                  // padding: const EdgeInsets.all(10),
+      backgroundColor: MyColor.bgColor,
+      appBar: CustomAppBar(title: "Ticket #$ticketId"),
+      body: Column(
+        children: [
+          // Ticket Header Card
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: MyColor.cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: MyColor.borderColor, width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.green.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green),
+                  ),
+                  child: Text("Open",
+                      style: mulishSemiBold.copyWith(color: Colors.green)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "[$ticketId] $subject",
+                    style: mulishBold.copyWith(
+                        fontSize: 16, color: MyColor.getTextColor()),
+                  ),
+                ),
+                CircleIconButton(
+                  onTap: () => Get.back(),
+                  backgroundColor: MyColor.closeRedColor,
+                  child: const Icon(Icons.close, color: Colors.white, size: 18),
+                ),
+              ],
+            ),
+          ),
+
+          // Messages List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              reverse: true, // Latest message at bottom
+              itemCount: dummyMessages.length,
+              itemBuilder: (ctx, i) {
+                final msg = dummyMessages[i];
+                final isAdmin = msg["isAdmin"] as bool;
+
+                return Container(
+                  margin: EdgeInsets.only(
+                    left: isAdmin ? 60 : 12,
+                    right: isAdmin ? 12 : 60,
+                    bottom: 16,
                   ),
                   child: Column(
+                    crossAxisAlignment: isAdmin
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.end,
                     children: [
-                      const SizedBox(height: Dimensions.space15),
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: MyColor.cardBg,
-                            border: Border.all(
-                              color: Theme.of(context).textTheme.titleLarge!.color!.withOpacity(0.1),
-                              width: 1,
-                              strokeAlign: BorderSide.strokeAlignOutside,
-                            )),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: Dimensions.space10, vertical: Dimensions.space5),
-                                    decoration: BoxDecoration(
-                                      color: controller.getStatusColor(controller.model.data?.myTickets?.status ?? "0").withOpacity(0.2),
-                                      border: Border.all(color: controller.getStatusColor(controller.model.data?.myTickets?.status ?? "0"), width: 1),
-                                      borderRadius: BorderRadius.circular(Dimensions.radius),
-                                    ),
-                                    child: Text(
-                                      controller.getStatusText(controller.model.data?.myTickets?.status ?? '0'),
-                                      style: mulishRegular.copyWith(
-                                        color: controller.getStatusColor(controller.model.data?.myTickets?.status ?? "0"),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10, height: 2),
-                                  Expanded(
-                                    child: Text(
-                                      "[${MyStrings.ticket.tr}#${controller.model.data?.myTickets?.ticket ?? ''}] ${controller.model.data?.myTickets?.subject ?? ''}",
-                                      style: mulishBold.copyWith(
-                                        color: Theme.of(context).textTheme.titleLarge!.color!,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 2,
-                                    height: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (controller.model.data?.myTickets?.status != '3')
-                              CustomCircleAnimatedButton(
-                                onTap: () {
-                                  controller.closeTicket(controller.model.data?.myTickets?.id.toString() ?? '-1');
-                                },
-                                height: 40,
-                                width: 40,
-                                backgroundColor: MyColor.red,
-                                border: Border.all(color: MyColor.colorWhite, width: 1),
-                                child: const Icon(Icons.close_rounded, color: MyColor.colorWhite, size: 20),
-                              )
-                          ],
+                          color: isAdmin
+                              ? MyColor.primaryColor.withOpacity(0.12)
+                              : MyColor.primaryColor,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: isAdmin
+                                ? Radius.zero
+                                : const Radius.circular(16),
+                            bottomRight: isAdmin
+                                ? const Radius.circular(16)
+                                : Radius.zero,
+                          ),
+                          border: Border.all(
+                              color: MyColor.primaryColor.withOpacity(0.3)),
                         ),
-                      ),
-                      const SizedBox(
-                        height: Dimensions.space15,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: MyColor.cardBg,
-                            border: Border.all(
-                              color: MyColor.borderColor.withOpacity(0.8),
-                              width: 1,
-                              strokeAlign: BorderSide.strokeAlignOutside,
-                            )),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 20),
-                            LabelText(text: MyStrings.message.tr),
-                            CustomTextField(
-                              controller: controller.replyController,
-                              hintText: MyStrings.yourReply.tr,
-                              maxLines: 4,
-                              onChanged: (value) {},
+                            Text(
+                              msg["message"],
+                              style: mulishRegular.copyWith(
+                                color: isAdmin
+                                    ? MyColor.getTextColor()
+                                    : Colors.white,
+                                height: 1.5,
+                              ),
                             ),
-                            const SizedBox(height: 10),
-                            LabelText(text: MyStrings.attachments.tr),
-                            controller.attachmentList.isNotEmpty ? const SizedBox(height: 20) : const SizedBox.shrink(),
-                            controller.attachmentList.isNotEmpty
-                                ? SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        ZoomTapAnimation(
-                                          onTap: () {
-                                            if (controller.attachmentList.length < 5) {
-                                              controller.pickFile();
-                                            } else {
-                                              CustomSnackbar.showCustomSnackbar(errorList: [MyStrings.attactmentError], msg: [], isError: true);
-                                            }
-                                          },
-                                          child: Container(
-                                            width: context.width / 5,
-                                            height: context.width / 5,
-                                            margin: const EdgeInsets.only(right: Dimensions.space10),
-                                            decoration: BoxDecoration(color: MyColor.transparentColor, borderRadius: BorderRadius.circular(Dimensions.mediumRadius), border: Border.all(color: MyColor.borderColor, width: 1)),
-                                            child: const Icon(Icons.add),
-                                          ),
-                                        ),
-                                        Row(
-                                          children: List.generate(
-                                            controller.attachmentList.length,
-                                            (index) => Row(
-                                              children: [
-                                                Stack(
-                                                  children: [
-                                                    Container(
-                                                      margin: const EdgeInsets.all(Dimensions.space5),
-                                                      decoration: const BoxDecoration(),
-                                                      child: controller.isImage(controller.attachmentList[index].path)
-                                                          ? ClipRRect(
-                                                              borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
-                                                              child: Image.file(
-                                                                controller.attachmentList[index],
-                                                                width: context.width / 5,
-                                                                height: context.width / 5,
-                                                                fit: BoxFit.cover,
-                                                              ))
-                                                          : controller.isXlsx(controller.attachmentList[index].path)
-                                                              ? Container(
-                                                                  width: context.width / 5,
-                                                                  height: context.width / 5,
-                                                                  decoration: BoxDecoration(
-                                                                    color: MyColor.colorWhite,
-                                                                    borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
-                                                                    border: Border.all(color: MyColor.borderColor, width: 1),
-                                                                  ),
-                                                                  child: Center(
-                                                                    child: SvgPicture.asset(
-                                                                      MyIcons.xlsx,
-                                                                      height: 45,
-                                                                      width: 45,
-                                                                    ),
-                                                                  ),
-                                                                )
-                                                              : controller.isDoc(controller.attachmentList[index].path)
-                                                                  ? Container(
-                                                                      width: context.width / 5,
-                                                                      height: context.width / 5,
-                                                                      decoration: BoxDecoration(
-                                                                        color: MyColor.colorWhite,
-                                                                        borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
-                                                                        border: Border.all(color: MyColor.borderColor, width: 1),
-                                                                      ),
-                                                                      child: Center(
-                                                                        child: SvgPicture.asset(
-                                                                          MyIcons.doc,
-                                                                          height: 45,
-                                                                          width: 45,
-                                                                        ),
-                                                                      ),
-                                                                    )
-                                                                  : Container(
-                                                                      width: context.width / 5,
-                                                                      height: context.width / 5,
-                                                                      decoration: BoxDecoration(
-                                                                        color: MyColor.colorWhite,
-                                                                        borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
-                                                                        border: Border.all(color: MyColor.borderColor, width: 1),
-                                                                      ),
-                                                                      child: Center(
-                                                                        child: SvgPicture.asset(
-                                                                          MyIcons.pdfFile,
-                                                                          height: 45,
-                                                                          width: 45,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                    ),
-                                                    CircleIconButton(
-                                                      onTap: () {
-                                                        controller.removeAttachmentFromList(index);
-                                                      },
-                                                      height: Dimensions.space20 + 5,
-                                                      width: Dimensions.space20 + 5,
-                                                      backgroundColor: MyColor.redCancelTextColor,
-                                                      child: const Icon(
-                                                        Icons.close,
-                                                        color: MyColor.colorWhite,
-                                                        size: Dimensions.space15,
-                                                      ),
-                                                    )
-                                                  ],
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : ZoomTapAnimation(
-                                    onTap: () {
-                                      if (controller.attachmentList.length < 5) {
-                                        controller.pickFile();
-                                      } else {
-                                        CustomSnackbar.showCustomSnackbar(errorList: [MyStrings.attactmentError], msg: [], isError: true);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: Dimensions.space20, vertical: Dimensions.space30),
-                                      margin: const EdgeInsets.only(top: Dimensions.space5),
-                                      width: context.width,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
-                                        color: MyColor.textFieldColor,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          const Icon(Icons.attachment_rounded, color: MyColor.colorWhite),
-                                          Text(MyStrings.chooseFile.tr, style: mulishLight.copyWith(color: MyColor.colorWhite)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                            const SizedBox(height: Dimensions.space30),
-                            controller.submitLoading
-                                ? const RoundedLoadingButton()
-                                : RoundedButton(
-                                    text: MyStrings.reply.tr,
-                                    press: () {
-                                      controller.uploadTicketViewReply();
-                                    },
-                                  ),
-                            const SizedBox(height: Dimensions.space30),
+                            if ((msg["attachments"] as List).isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                children:
+                                    (msg["attachments"] as List).map((file) {
+                                  return Chip(
+                                    label: Text(file,
+                                        style: const TextStyle(fontSize: 12)),
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.2),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                      controller.messageList.isEmpty
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(horizontal: Dimensions.space20, vertical: Dimensions.space20),
+                      const SizedBox(height: 6),
+                      Text(
+                        msg["time"],
+                        style: mulishRegular.copyWith(
+                            fontSize: 11, color: MyColor.bodyTextColor),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Reply Box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: MyColor.cardBg,
+              border: Border(top: BorderSide(color: MyColor.borderColor)),
+            ),
+            child: Column(
+              children: [
+                // Attachments Preview
+                if (_attachments.isNotEmpty)
+                  SizedBox(
+                    height: 80,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _attachments.length,
+                      itemBuilder: (ctx, i) {
+                        final file = _attachments[i];
+                        return Stack(
+                          children: [
+                            Container(
+                              width: 70,
+                              height: 70,
+                              margin: const EdgeInsets.only(right: 10),
                               decoration: BoxDecoration(
-                                color: MyColor.bodyTextColor.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(Dimensions.mediumRadius),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: MyColor.borderColor),
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    MyStrings.noMSgFound.tr,
-                                    style: mulishRegular.copyWith(color: MyColor.colorGrey),
-                                  ),
-                                ],
-                              ))
-                          : Container(
-                              padding: const EdgeInsets.symmetric(vertical: 30),
-                              child: ListView.builder(
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: controller.messageList.length,
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) => TicketViewCommentReplyModel(
-                                  index: index,
-                                  messages: controller.messageList[index],
+                              child: Center(
+                                child: SvgPicture.asset(
+                                  file["type"] == "image"
+                                      ? MyIcons.file
+                                      : file["type"] == "pdf"
+                                          ? MyIcons.pdfFile
+                                          : file["type"] == "doc"
+                                              ? MyIcons.doc
+                                              : MyIcons.xlsx,
+                                  height: 36,
                                 ),
                               ),
                             ),
-                    ],
+                            Positioned(
+                              top: 0,
+                              right: 4,
+                              child: CircleIconButton(
+                                onTap: () =>
+                                    setState(() => _attachments.removeAt(i)),
+                                height: 22,
+                                width: 22,
+                                backgroundColor: MyColor.closeRedColor,
+                                child: const Icon(Icons.close,
+                                    size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    ZoomTapAnimation(
+                      onTap: _attachments.length < 5 ? _addDummyFile : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: MyColor.textFieldColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: MyColor.borderColor),
+                        ),
+                        child: Icon(Icons.attachment_rounded,
+                            color: MyColor.primaryColor),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _replyController,
+                        maxLines: 3,
+                        minLines: 1,
+                        decoration: InputDecoration(
+                          hintText: "Type your reply...",
+                          hintStyle: mulishRegular.copyWith(
+                              color: MyColor.hintTextColor),
+                          filled: true,
+                          fillColor: MyColor.textFieldColor,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: MyColor.borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: MyColor.borderColor),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ZoomTapAnimation(
+                      onTap: _sendReply,
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: MyColor.primaryColor,
+                        child:
+                            const Icon(Icons.send_rounded, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-      }),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-
-//

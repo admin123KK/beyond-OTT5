@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/helper/date_converter.dart';
 import 'package:play_lab/core/route/route.dart';
-import 'package:play_lab/core/utils/dimensions.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/data/controller/support/support_controller.dart';
-import 'package:play_lab/data/repo/support/support_repo.dart';
-import 'package:play_lab/data/services/api_service.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
-import 'package:play_lab/view/components/column_widget/card_column.dart';
-import 'package:play_lab/view/components/custom_loader/custom_loader.dart';
 import 'package:play_lab/view/components/floating_action_button/fab.dart';
-import 'package:play_lab/view/components/no_data_widget.dart';
-import 'package:play_lab/view/components/shimmar/match_card_shimmer.dart';
 
 class AllTicketScreen extends StatefulWidget {
   const AllTicketScreen({super.key});
@@ -25,156 +16,241 @@ class AllTicketScreen extends StatefulWidget {
 }
 
 class _AllTicketScreenState extends State<AllTicketScreen> {
-  ScrollController scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
-  void scrollListener() {
-    if (scrollController.position.pixels == scrollController.position.maxScrollExtent) {
-      if (Get.find<SupportController>().hasNext()) {
-        Get.find<SupportController>().getSupportTicket();
-      }
-    }
-  }
+  final List<Map<String, String>> tickets = [
+    // ... your dummy data (same as before)
+    {
+      "ticket": "TKT-1001",
+      "subject": "Login Issue",
+      "status": "1",
+      "priority": "3",
+      "createdAt": "2025-03-30T18:00:00.000Z",
+    },
+    {
+      "ticket": "TKT-1002",
+      "subject": "Video Not Playing",
+      "status": "2",
+      "priority": "3",
+      "createdAt": "2025-03-29T14:20:00.000Z",
+    },
+    {
+      "ticket": "TKT-1003",
+      "subject": "Payment Failed",
+      "status": "3",
+      "priority": "4",
+      "createdAt": "2025-03-28T09:15:00.000Z",
+    },
+    {
+      "ticket": "TKT-1004",
+      "subject": "App Crashing on Android",
+      "status": "4",
+      "priority": "2",
+      "createdAt": "2025-03-25T12:00:00.000Z",
+    },
+    {
+      "ticket": "TKT-1005",
+      "subject": "Can't Find My Subscription",
+      "status": "1",
+      "priority": "2",
+      "createdAt": "2025-03-20T16:45:00.000Z",
+    },
+  ];
+
+  // Color & text helpers (same as before)
+  Color getStatusColor(String s) =>
+      {
+        "1": Colors.green,
+        "2": Colors.blue,
+        "3": Colors.orange,
+        "4": Colors.grey
+      }[s] ??
+      Colors.grey;
+
+  String getStatusText(String s) =>
+      {"1": "Open", "2": "Answered", "3": "Replied", "4": "Closed"}[s] ??
+      "Unknown";
+
+  Color getPriorityColor(String p) =>
+      {
+        "1": Colors.blue,
+        "2": Colors.orange,
+        "3": Colors.red,
+        "4": Colors.purple
+      }[p] ??
+      Colors.grey;
+
+  String getPriorityText(String p) =>
+      {"1": "Low", "2": "Medium", "3": "High", "4": "Urgent"}[p] ?? "Medium";
 
   @override
-  void initState() {
-    Get.put(ApiClient(sharedPreferences: Get.find()));
-    Get.put(SupportRepo(apiClient: Get.find()));
-    final controller = Get.put(SupportController(repo: Get.find()));
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      controller.loadData();
-      scrollController.addListener(scrollListener);
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // This function opens the drawer on Home screen
+  void _openHomeDrawer() {
+    // Delay to make sure we're back on Home first
+    Future.delayed(const Duration(milliseconds: 150), () {
+      final scaffold =
+          Scaffold.maybeOf(Get.nestedKey(1)?.currentContext ?? context);
+      scaffold?.openDrawer();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<SupportController>(builder: (controller) {
-      return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        Get.back(); // Close this screen
+        _openHomeDrawer(); // Open drawer on Home
+        return false; // Prevent default pop
+      },
+      child: Scaffold(
         backgroundColor: MyColor.bgColor,
-        appBar: const CustomAppBar(title: MyStrings.supportTicket),
+
+        // CustomAppBar without leading (it already has drawer icon)
+        appBar: CustomAppBar(
+          title: MyStrings.supportTicket.tr,
+
+          // If your CustomAppBar supports onBackPressed → use it
+          // onBackPressed: () {
+          //   Get.back();
+          //   _openHomeDrawer();
+          // },
+
+          // OR if it has leadingOnPress → use that
+          // leadingOnPress: () {
+          //   Get.back();
+          //   _openHomeDrawer();
+          // },
+        ),
+
+        floatingActionButton: FAB(
+          callback: () => Get.toNamed(RouteHelper.newTicketScreen),
+        ),
+
         body: RefreshIndicator(
-          onRefresh: () async {
-            controller.loadData();
-          },
+          onRefresh: () async => setState(() {}),
           color: MyColor.primaryColor,
-          child: Column(
-            children: [
-              if (controller.ticketList.isEmpty && controller.isLoading == false) ...[const Expanded(child: NoDataFoundScreen())],
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                  padding: Dimensions.padding,
-                  child: controller.isLoading
-                      ? ListView.builder(
-                          itemCount: 10,
-                          physics: const BouncingScrollPhysics(),
-                          shrinkWrap: true,
-                          itemBuilder: (BuildContext context, int index) {
-                            return const MatchCardShimmer();
-                          },
-                        )
-                      : ListView.separated(
-                          controller: scrollController,
-                          itemCount: controller.ticketList.length + 1,
-                          shrinkWrap: true,
-                          physics: const BouncingScrollPhysics(),
-                          separatorBuilder: (context, index) => const SizedBox(height: Dimensions.space10),
-                          itemBuilder: (context, index) {
-                            if (controller.ticketList.length == index) {
-                              return controller.hasNext() ? const CustomLoader(isPagination: true) : const SizedBox();
-                            }
-                            return GestureDetector(
-                              onTap: () {
-                                String id = controller.ticketList[index].ticket ?? '-1';
-                                String subject = controller.ticketList[index].subject ?? '';
-                                Get.toNamed(RouteHelper.ticketDetailsdScreen, arguments: [id, subject]);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: Dimensions.space10, vertical: Dimensions.space20 + 5),
-                                decoration: BoxDecoration(color: MyColor.textFieldColor, borderRadius: BorderRadius.circular(Dimensions.mediumRadius), border: Border.all(color: MyColor.borderColor, width: 1)),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: tickets.isEmpty
+              ? const Center(
+                  child: Text("No tickets found",
+                      style: TextStyle(color: Colors.white54, fontSize: 16)))
+              : ListView.separated(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  itemCount: tickets.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final t = tickets[index];
+
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => Get.toNamed(
+                        RouteHelper.ticketDetailsdScreen,
+                        arguments: [t["ticket"], t["subject"]],
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: MyColor.cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: MyColor.borderColor.withOpacity(0.5)),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RichText(
+                                    text: TextSpan(
                                       children: [
-                                        Flexible(
-                                          child: Padding(
-                                            padding: const EdgeInsetsDirectional.only(end: Dimensions.space10),
-                                            child: Column(
-                                              children: [
-                                                CardColumn(
-                                                  header: "[${MyStrings.ticket.tr}#${controller.ticketList[index].ticket}] ${controller.ticketList[index].subject}",
-                                                  body: "${controller.ticketList[index].subject}",
-                                                  space: 5,
-                                                  headerTextDecoration: mulishRegular.copyWith(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                  bodyTextDecoration: mulishRegular.copyWith(),
-                                                )
-                                              ],
-                                            ),
-                                          ),
+                                        TextSpan(
+                                          text: "[${t["ticket"]}] ",
+                                          style: mulishBold.copyWith(
+                                              color: MyColor.primaryColor,
+                                              fontSize: 15),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: Dimensions.space10, vertical: Dimensions.space5),
-                                          decoration: BoxDecoration(
-                                            color: controller.getStatusColor(controller.ticketList[index].status ?? "0").withOpacity(0.2),
-                                            border: Border.all(color: controller.getStatusColor(controller.ticketList[index].status ?? "0"), width: 1),
-                                          ),
-                                          child: Text(
-                                            controller.getStatusText(controller.ticketList[index].status ?? '0'),
-                                            style: mulishRegular.copyWith(
-                                              color: controller.getStatusColor(controller.ticketList[index].status ?? "0"),
-                                            ),
-                                          ),
-                                        )
+                                        TextSpan(
+                                          text: t["subject"],
+                                          style: mulishBold.copyWith(
+                                              color: Colors.white,
+                                              fontSize: 16),
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: Dimensions.space15),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: Dimensions.space10, vertical: Dimensions.space5),
-                                          decoration: BoxDecoration(
-                                            color: controller.getStatusColor(controller.ticketList[index].priority ?? "0", isPriority: true).withOpacity(0.2),
-                                            border: Border.all(
-                                              color: controller.getStatusColor(controller.ticketList[index].priority ?? "0", isPriority: true),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            controller.getStatus(controller.ticketList[index].priority ?? '1', isPriority: true),
-                                            style: mulishRegular.copyWith(
-                                              color: controller.getStatusColor(controller.ticketList[index].priority ?? "0", isPriority: true),
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          DateConverter.getFormatedSubtractTime(controller.ticketList[index].createdAt ?? ''),
-                                          style: mulishRegular.copyWith(fontSize: 10, color: MyColor.ticketDateColor),
-                                        ),
-                                      ],
-                                    )
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: getStatusColor(t["status"]!)
+                                        .withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                        color: getStatusColor(t["status"]!),
+                                        width: 1.5),
+                                  ),
+                                  child: Text(
+                                    getStatusText(t["status"]!),
+                                    style: mulishSemiBold.copyWith(
+                                        color: getStatusColor(t["status"]!),
+                                        fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: getPriorityColor(t["priority"]!)
+                                        .withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                        color: getPriorityColor(t["priority"]!),
+                                        width: 1.5),
+                                  ),
+                                  child: Text(
+                                    getPriorityText(t["priority"]!),
+                                    style: mulishSemiBold.copyWith(
+                                        color: getPriorityColor(t["priority"]!),
+                                        fontSize: 13),
+                                  ),
+                                ),
+                                Text(
+                                  DateConverter.getFormatedSubtractTime(
+                                      t["createdAt"]!),
+                                  style: mulishRegular.copyWith(
+                                      fontSize: 12,
+                                      color: MyColor.bodyTextColor),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            ],
-          ),
         ),
-        floatingActionButton: FAB(
-          callback: () {
-            Get.toNamed(RouteHelper.newTicketScreen)?.then((value) => {Get.find<SupportController>().getSupportTicket()});
-          },
-        ),
-      );
-    });
+      ),
+    );
   }
 }

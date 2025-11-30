@@ -34,8 +34,17 @@ class RoundedButton extends StatelessWidget {
       width: size.width * width,
       child: ElevatedButton(
         onPressed: isLoading ? () {} : press,
-        style: ElevatedButton.styleFrom(backgroundColor: color, padding: EdgeInsets.symmetric(horizontal: hPadding, vertical: vPadding), textStyle: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(vRadius))),
-        child: isLoading ? const CustomLoader(loaderColor: MyColor.colorWhite) : Text(text.tr, style: TextStyle(color: textColor)),
+        style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            padding:
+                EdgeInsets.symmetric(horizontal: hPadding, vertical: vPadding),
+            textStyle: TextStyle(
+                color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(vRadius))),
+        child: isLoading
+            ? const CustomLoader(loaderColor: MyColor.colorWhite)
+            : Text(text.tr, style: TextStyle(color: textColor)),
       ),
     );
   }
