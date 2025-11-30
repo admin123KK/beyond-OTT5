@@ -266,11 +266,7 @@ class _MoviePurchaseScreenState extends State<MoviePurchaseScreen> {
       }
     } else {
       // Payment Gateways Selected → Go to real PaymentMethodScreen
-      Get.toNamed(RouteHelper.paymentMethodScreen, arguments: {
-        'amount': price,
-        'movieTitle': title,
-        'fromMoviePurchase': true,
-      });
+      Get.toNamed(RouteHelper.paymentMethodScreen);
     }
   }
 
