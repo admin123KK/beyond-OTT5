@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
@@ -144,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen>
             physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics()),
             slivers: [
-              // FIXED: Proper SliverAppBar with animated search
               SliverAppBar(
                 backgroundColor: MyColor.colorBlack,
                 elevation: 0,
@@ -231,8 +230,6 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ),
-
-              // FIXED: Removed fixed height 480 → No more overflow
               SliverToBoxAdapter(
                 child: AspectRatio(
                   aspectRatio: 0.85,
@@ -277,7 +274,6 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ),
-
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,72 +304,80 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // YOUR ORIGINAL METHODS — 100% UNCHANGED
   Widget _buildFeaturedMovieItem(
       {required String imageUrl, required String title, required String year}) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-          image: DecorationImage(
-              image: NetworkImage(imageUrl), fit: BoxFit.cover)),
-      child: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.7),
-                  Colors.black.withOpacity(0.95)
+    return InkWell(
+      onTap: () {
+        Get.toNamed(RouteHelper.watchMovie, arguments: {
+          'title': title,
+          'coverImage': imageUrl,
+          'year': year,
+        });
+      },
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+            image: DecorationImage(
+                image: NetworkImage(imageUrl), fit: BoxFit.cover)),
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.95)
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(color: Colors.black, blurRadius: 10)
+                          ])),
+                  const SizedBox(height: 8),
+                  Text("Released in $year • Action • Thriller",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 16)),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Get.toNamed(RouteHelper.watchMovie, arguments: {
+                        'title': title,
+                        'coverImage': imageUrl,
+                        'year': year,
+                      });
+                    },
+                    icon: const Icon(Icons.play_arrow,
+                        size: 28, color: Colors.white),
+                    label: const Text("Watch Now",
+                        style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyColor.primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(color: Colors.black, blurRadius: 10)
-                        ])),
-                const SizedBox(height: 8),
-                Text("Released in $year • Action • Thriller",
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Get.toNamed(RouteHelper.watchMovie, arguments: {
-                      'title': title,
-                      'coverImage': imageUrl,
-                      'year': year,
-                    });
-                  },
-                  icon: const Icon(Icons.play_arrow,
-                      size: 28, color: Colors.white),
-                  label: const Text("Watch Now",
-                      style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: MyColor.primaryColor,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -404,6 +408,8 @@ class _HomeScreenState extends State<HomeScreen>
               imageUrl:
                   'https://yt3.googleusercontent.com/-7k9f25VwXdzn77vsMP6wgF8FL4i4p-LycW6EeYQCNOfnYFz1BLIrGgc4X3RZg116L8fsxFJ_A=s900-c-k-c0x-state-no-rj',
               label: "Live Channel",
+              title: "Live TV Stream",
+              year: "2025",
               baseColor: Colors.redAccent)));
 
   Widget _buildMoviesList() => SizedBox(
@@ -415,6 +421,8 @@ class _HomeScreenState extends State<HomeScreen>
           itemBuilder: (c, i) => _buildChannelItem(
               imageUrl: moviePosters[i],
               label: "Action Movie",
+              title: "Featured Movie",
+              year: "2024",
               baseColor: Colors.blueAccent)));
 
   Widget _buildLatestSeriesList() => SizedBox(
@@ -426,60 +434,69 @@ class _HomeScreenState extends State<HomeScreen>
           itemBuilder: (c, i) => _buildChannelItem(
               imageUrl: latestSeriesPosters[i]["image"]!,
               label: latestSeriesPosters[i]["title"]!,
+              title: latestSeriesPosters[i]["title"]!,
+              year: "2024-2025",
               baseColor: Colors.purpleAccent)));
 
-  Widget _buildChannelItem(
-      {required String imageUrl,
-      required String label,
-      required Color baseColor}) {
-    return Container(
-      width: 120,
-      margin: const EdgeInsets.only(right: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (c, child, p) => p == null
-                    ? child
-                    : Container(
-                        color: baseColor.withOpacity(0.3),
-                        child: const Center(
-                            child: CircularProgressIndicator(
-                                color: MyColor.primaryColor, strokeWidth: 2))),
-                errorBuilder: (_, __, ___) => Container(
-                    color: baseColor.withOpacity(0.3),
-                    child:
-                        const Icon(Icons.broken_image, color: Colors.white54)),
+  // UPDATED: Now navigates to WatchMovieDetailsScreen on tap
+  Widget _buildChannelItem({
+    required String imageUrl,
+    required String label,
+    required String title,
+    required String year,
+    required Color baseColor,
+  }) {
+    return InkWell(
+      onTap: () {
+        Get.toNamed(RouteHelper.watchMovie, arguments: {
+          'title': title,
+          'coverImage': imageUrl,
+          'year': year,
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.only(right: 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (c, child, p) => p == null
+                      ? child
+                      : Container(
+                          color: baseColor.withOpacity(0.3),
+                          child: const Center(
+                              child: CircularProgressIndicator(
+                                  color: MyColor.primaryColor,
+                                  strokeWidth: 2))),
+                  errorBuilder: (_, __, ___) => Container(
+                      color: baseColor.withOpacity(0.3),
+                      child: const Icon(Icons.broken_image,
+                          color: Colors.white54)),
+                ),
               ),
-            ),
-            Center(
+              Align(
+                alignment: Alignment.bottomCenter,
                 child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        shape: BoxShape.circle),
-                    child: Icon(Icons.play_arrow_rounded,
-                        size: 38, color: baseColor))),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  color: Colors.black.withOpacity(0.8),
-                  child: Text(label,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis)),
-            ),
-          ],
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.black.withOpacity(0.8),
+                    child: Text(label,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -491,20 +508,31 @@ class _HomeScreenState extends State<HomeScreen>
           padding: const EdgeInsets.symmetric(horizontal: 15),
           scrollDirection: Axis.horizontal,
           itemCount: 8,
-          itemBuilder: (c, i) => Container(
-              width: 120,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                  color: color.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.play_circle_outline, size: 50, color: color),
-                    const SizedBox(height: 10),
-                    Text(label,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 12),
-                        textAlign: TextAlign.center)
-                  ]))));
+          itemBuilder: (c, i) => InkWell(
+                onTap: () {
+                  Get.toNamed(RouteHelper.watchMovie, arguments: {
+                    'title': "Free Zone Content",
+                    'coverImage':
+                        'https://via.placeholder.com/300x450/333333/FFFFFF?text=Free+Content',
+                    'year': "2025",
+                  });
+                },
+                child: Container(
+                    width: 120,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                        color: color.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.play_circle_outline,
+                              size: 50, color: color),
+                          const SizedBox(height: 10),
+                          Text(label,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
+                              textAlign: TextAlign.center)
+                        ])),
+              )));
 }
