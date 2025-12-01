@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:play_lab/view/screens/account/payment_log_screen/active_session.dart';
+import 'package:play_lab/view/screens/account/payment_log_screen/setting_screen.dart';
 import 'package:play_lab/view/screens/bottom_nav_pages/all_movies/movie_purchase.dart';
 import 'package:play_lab/view/screens/bottom_nav_pages/all_movies/watch_movie.dart';
 import 'package:play_lab/view/screens/faq/faq_screen.dart';
@@ -106,6 +108,8 @@ class RouteHelper {
   static const String rentItemScreen = '/rent-item-screen';
   static const String watchMovie = '/watchmovie-scren';
   static const String moviePurchase = '/moviepurchase-scren';
+  static const String settingScreen = '/setting-screen';
+  static const String activeDevice = '/activeDevice-screen';
 
   static const String supportTicketMethodsList = '/all_ticket_methods';
   static const String allTicketScreen = '/all_ticket_screen';
@@ -138,8 +142,11 @@ class RouteHelper {
         name: myWatchHistoryScreen, page: () => const MyWatchHistoryScreen()),
     GetPage(name: subscribeScreen, page: () => const SubscribePlanScreen()),
     GetPage(name: profileScreen, page: () => const ProfileScreen()),
-    GetPage(name: watchMovie, page: () => WatchMovieDetailsScreen()),
-    GetPage(name: moviePurchase, page: () => MoviePurchaseScreen()),
+    GetPage(name: watchMovie, page: () => const WatchMovieDetailsScreen()),
+    GetPage(name: moviePurchase, page: () => const MoviePurchaseScreen()),
+    GetPage(name: settingScreen, page: () => const SettingScreen()),
+    GetPage(name: activeDevice, page: () => const ActiveDeviceScreen()),
+
     GetPage(name: profileComplete, page: () => const ProfileCompleteScreen()),
     GetPage(
         name: changePasswordScreen, page: () => const ChangePasswordScreen()),

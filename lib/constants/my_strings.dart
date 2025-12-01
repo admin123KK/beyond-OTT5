@@ -338,6 +338,7 @@ class MyStrings {
   static const String rentSubscriptionMsg =
       "Please purchase this rental item for ";
   static const String payNow = 'Pay Now';
+  static const String setting = 'Setting';
 
   static const String googlePay = 'Google Pay';
   static const String applePay = 'Apple Pay';

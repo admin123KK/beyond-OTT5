@@ -35,7 +35,7 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
           "Wallet Top Up",
           style: mulishSemiBold.copyWith(color: Colors.white, fontSize: 18),
         ),
-        centerTitle: true,
+        // centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),

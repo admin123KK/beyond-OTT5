@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/otp_field_widget/otp_field_widget.dart';
-
 import '../../../../../constants/my_strings.dart';
 import '../../../../../../core/utils/my_color.dart';
 import '../../../../../core/utils/dimensions.dart';

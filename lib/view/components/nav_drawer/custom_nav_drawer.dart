@@ -133,8 +133,8 @@ class NavigationDrawerWidget extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   icon: Icons.card_giftcard,
-                  title: "Package",
-                  onTap: () => Get.toNamed(RouteHelper.paymentHistoryScreen),
+                  title: MyStrings.history,
+                  onTap: () => Get.toNamed(RouteHelper.watchPartyHistoryScreen),
                 ),
                 _buildDrawerItem(
                   icon: Icons.account_balance_wallet_outlined,
@@ -143,8 +143,8 @@ class NavigationDrawerWidget extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   icon: Icons.settings_outlined,
-                  title: MyStrings.profileSetting,
-                  onTap: () => Get.toNamed(RouteHelper.profileScreen),
+                  title: MyStrings.setting,
+                  onTap: () => Get.toNamed(RouteHelper.settingScreen),
                 ),
                 _buildDrawerItem(
                   icon: Icons.support_agent_sharp,
@@ -202,7 +202,7 @@ class NavigationDrawerWidget extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Icon(Icons.logout, color: MyColor.primaryColor, size: 28),
+            const Icon(Icons.logout, color: MyColor.primaryColor, size: 28),
             const SizedBox(width: 12),
             Text(
               "Confirm Logout",
