@@ -38,7 +38,10 @@ class ApiClient extends GetxService {
               "Accept": "application/json",
             });
           } else {
-            response = await http.post(url, body: params, headers: {"Accept": "application/json", "Authorization": "$tokenType $token"});
+            response = await http.post(url, body: params, headers: {
+              "Accept": "application/json",
+              "Authorization": "$tokenType $token"
+            });
           }
         } else {
           response = await http.post(url, body: params);
@@ -46,7 +49,10 @@ class ApiClient extends GetxService {
       } else if (method == Method.postMethod) {
         if (passHeader) {
           initToken();
-          response = await http.post(url, body: params, headers: {"Accept": "application/json", "Authorization": "$tokenType $token"});
+          response = await http.post(url, body: params, headers: {
+            "Accept": "application/json",
+            "Authorization": "$tokenType $token"
+          });
         } else {
           response = await http.post(url, body: params);
         }
@@ -57,7 +63,10 @@ class ApiClient extends GetxService {
       } else {
         if (passHeader) {
           initToken();
-          response = await http.get(url, headers: {"Accept": "application/json", "Authorization": "$tokenType $token"});
+          response = await http.get(url, headers: {
+            "Accept": "application/json",
+            "Authorization": "$tokenType $token"
+          });
         } else {
           response = await http.get(
             url,
@@ -75,9 +84,11 @@ class ApiClient extends GetxService {
       }
       if (response.statusCode == 200) {
         try {
-          AuthorizationResponseModel model = AuthorizationResponseModel.fromJson(jsonDecode(response.body));
+          AuthorizationResponseModel model =
+              AuthorizationResponseModel.fromJson(jsonDecode(response.body));
 
-          if (model.remark == 'unverified' || model.remark == 'profile_incomplete') {
+          if (model.remark == 'unverified' ||
+              model.remark == 'profile_incomplete') {
             checkAndGotoNextStep(model);
           } else if (model.remark == 'unauthenticated') {
             Get.offAndToNamed(RouteHelper.loginScreen);
@@ -106,11 +117,14 @@ class ApiClient extends GetxService {
   }
 
   void checkAndGotoNextStep(AuthorizationResponseModel responseModel) async {
-    bool needEmailVerification = responseModel.data?.user?.ev == "1" ? false : true;
+    bool needEmailVerification =
+        responseModel.data?.user?.ev == "1" ? false : true;
 
-    bool needSmsVerification = responseModel.data?.user?.sv == '1' ? false : true;
+    bool needSmsVerification =
+        responseModel.data?.user?.sv == '1' ? false : true;
 
-    bool isProfileCompleteEnable = responseModel.data?.user?.profileComplete == '0' ? true : false;
+    bool isProfileCompleteEnable =
+        responseModel.data?.user?.profileComplete == '0' ? true : false;
 
     if (isProfileCompleteEnable) {
       Get.offAndToNamed(RouteHelper.profileComplete);
@@ -128,8 +142,10 @@ class ApiClient extends GetxService {
 
   initToken() {
     if (sharedPreferences.containsKey(SharedPreferenceHelper.accessTokenKey)) {
-      String? t = sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey);
-      String? tType = sharedPreferences.getString(SharedPreferenceHelper.accessTokenType);
+      String? t =
+          sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey);
+      String? tType =
+          sharedPreferences.getString(SharedPreferenceHelper.accessTokenType);
       token = t ?? '';
       tokenType = tType ?? 'Bearer';
     } else {
@@ -139,41 +155,61 @@ class ApiClient extends GetxService {
   }
 
   SocialiteCredentials getSocialCredentialsConfigData() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    SocialiteCredentials social = model.data?.generalSetting?.socialiteCredentials ?? SocialiteCredentials();
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    SocialiteCredentials social =
+        model.data?.generalSetting?.socialiteCredentials ??
+            SocialiteCredentials();
     return social;
   }
 
   bool getSocialCredentialsEnabledAll() {
-    return getSocialCredentialsConfigData().google?.status == '1' && getSocialCredentialsConfigData().linkedin?.status == '1' && getSocialCredentialsConfigData().facebook?.status == '1';
+    return getSocialCredentialsConfigData().google?.status == '1' &&
+        getSocialCredentialsConfigData().linkedin?.status == '1' &&
+        getSocialCredentialsConfigData().facebook?.status == '1';
   }
 
   bool isSocialAnyOfSocialLoginOptionEnable() {
-    return getSocialCredentialsConfigData().google?.status == '1' || getSocialCredentialsConfigData().linkedin?.status == '1' || getSocialCredentialsConfigData().facebook?.status == '1';
+    return getSocialCredentialsConfigData().google?.status == '1' ||
+        getSocialCredentialsConfigData().linkedin?.status == '1' ||
+        getSocialCredentialsConfigData().facebook?.status == '1';
   }
 
   String getSocialCredentialsRedirectUrl() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
     String redirect = model.data?.socialLoginRedirect ?? "";
     return redirect;
   }
 
-  String getCurrencyOrUsername({bool isCurrency = true, bool isSymbol = false}) {
+  String getCurrencyOrUsername(
+      {bool isCurrency = true, bool isSymbol = false}) {
     if (isCurrency) {
-      String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-      GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-      String currency = isSymbol ? model.data?.generalSetting?.curSym ?? '' : model.data?.generalSetting?.curText ?? '';
+      String pre = sharedPreferences
+              .getString(SharedPreferenceHelper.generalSettingKey) ??
+          '';
+      GeneralSettingsResponseModel model =
+          GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+      String currency = isSymbol
+          ? model.data?.generalSetting?.curSym ?? ''
+          : model.data?.generalSetting?.curText ?? '';
       return currency;
     } else {
-      String username = sharedPreferences.getString(SharedPreferenceHelper.userNameKey) ?? '';
+      String username =
+          sharedPreferences.getString(SharedPreferenceHelper.userNameKey) ?? '';
       return username;
     }
   }
 
   bool isPaidUser() {
-    String expDate = sharedPreferences.getString(SharedPreferenceHelper.expiredDate) ?? '';
+    String expDate =
+        sharedPreferences.getString(SharedPreferenceHelper.expiredDate) ?? '';
     if (expDate.isEmpty) {
       return false;
     } else {
@@ -187,8 +223,11 @@ class ApiClient extends GetxService {
   }
 
   bool isWatchPartyEnable() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
     if (model.data?.generalSetting?.watchParty == '0') {
       return false;
     } else {
@@ -197,48 +236,86 @@ class ApiClient extends GetxService {
   }
 
   void storeExpiredDate(String expDate) async {
-    await sharedPreferences.setString(SharedPreferenceHelper.expiredDate, expDate);
+    await sharedPreferences.setString(
+        SharedPreferenceHelper.expiredDate, expDate);
   }
 
   bool getPasswordStrengthStatus() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    bool checkPasswordStrength = model.data?.generalSetting?.securePassword.toString() == '0' ? false : true;
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    bool checkPasswordStrength =
+        model.data?.generalSetting?.securePassword.toString() == '0'
+            ? false
+            : true;
     return checkPasswordStrength;
   }
 
   bool isLinkdinAuthEnable() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    bool isFacebookAuthEnable = model.data?.generalSetting?.socialiteCredentials?.linkedin?.status.toString() == '0' ? false : true;
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    bool isFacebookAuthEnable = model
+                .data?.generalSetting?.socialiteCredentials?.linkedin?.status
+                .toString() ==
+            '0'
+        ? false
+        : true;
     return isFacebookAuthEnable;
   }
 
   bool isFacebookAuthEnable() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    bool isFacebookAuthEnable = model.data?.generalSetting?.socialiteCredentials?.facebook?.status.toString() == '0' ? false : true;
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    bool isFacebookAuthEnable = model
+                .data?.generalSetting?.socialiteCredentials?.facebook?.status
+                .toString() ==
+            '0'
+        ? false
+        : true;
     return isFacebookAuthEnable;
   }
 
   bool isGmailAuthEnable() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    bool isGmailAuthEnable = model.data?.generalSetting?.socialiteCredentials?.google?.status.toString() == '0' ? false : true;
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    bool isGmailAuthEnable = model
+                .data?.generalSetting?.socialiteCredentials?.google?.status
+                .toString() ==
+            '0'
+        ? false
+        : true;
     return isGmailAuthEnable;
   }
 
   bool isShowAdMobAds() {
     initToken();
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
-    bool showAds = model.data?.generalSetting?.adShowMobile.toString() == '0' ? false : true;
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    bool showAds = model.data?.generalSetting?.adShowMobile.toString() == '0'
+        ? false
+        : true;
     printx('is show Ads $showAds');
 
     if (!showAds) {
       return false;
     }
-    String token = sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+    String token =
+        sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ??
+            '';
     if (token.isEmpty) {
       return true;
     } else {
@@ -250,8 +327,11 @@ class ApiClient extends GetxService {
   }
 
   String getTemplateName() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
     String templateName = model.data?.generalSetting?.activeTemplate ?? '';
     return templateName;
   }
@@ -264,24 +344,34 @@ class ApiClient extends GetxService {
 
   storePushSetting(PusherConfig pusherConfig) {
     String json = jsonEncode(pusherConfig.toJson());
-    sharedPreferences.setString(SharedPreferenceHelper.pusherConfigSettingKey, json);
+    sharedPreferences.setString(
+        SharedPreferenceHelper.pusherConfigSettingKey, json);
     getGSData();
   }
 
-  bool getAppOpeningStatus() => sharedPreferences.getBool(SharedPreferenceHelper.isFirstTimeKey) ?? false;
-  storeAppOpeningStatus() => sharedPreferences.setBool(SharedPreferenceHelper.isFirstTimeKey, true);
+  bool getAppOpeningStatus() =>
+      sharedPreferences.getBool(SharedPreferenceHelper.isFirstTimeKey) ?? false;
+  storeAppOpeningStatus() =>
+      sharedPreferences.setBool(SharedPreferenceHelper.isFirstTimeKey, true);
 
-  String getTimeZone() => sharedPreferences.getString(SharedPreferenceHelper.timeZoneKey) ?? 'UTC';
-  storeTimeZone(String timeZone) async => await sharedPreferences.setString(SharedPreferenceHelper.timeZoneKey, timeZone);
+  String getTimeZone() =>
+      sharedPreferences.getString(SharedPreferenceHelper.timeZoneKey) ?? 'UTC';
+  storeTimeZone(String timeZone) async => await sharedPreferences.setString(
+      SharedPreferenceHelper.timeZoneKey, timeZone);
 
   GeneralSettingsResponseModel getGSData() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
     return model;
   }
 
   PusherConfig getPushConfig() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.pusherConfigSettingKey) ?? '';
+    String pre = sharedPreferences
+            .getString(SharedPreferenceHelper.pusherConfigSettingKey) ??
+        '';
     PusherConfig model = PusherConfig.fromJson(jsonDecode(pre));
     return model;
   }
@@ -294,23 +384,33 @@ class ApiClient extends GetxService {
   }
 
   bool isAuthorizeUser() {
-    bool pref = sharedPreferences.getBool(SharedPreferenceHelper.rememberMeKey) ?? false;
+    bool pref =
+        sharedPreferences.getBool(SharedPreferenceHelper.rememberMeKey) ??
+            false;
     return pref;
   }
 
   storeUserProvider(String provider) async {
-    await sharedPreferences.setString(SharedPreferenceHelper.userProviderKey, provider);
+    await sharedPreferences.setString(
+        SharedPreferenceHelper.userProviderKey, provider);
   }
 
   bool isSocialUser() {
-    String pref = sharedPreferences.getString(SharedPreferenceHelper.userProviderKey) ?? "null";
+    String pref =
+        sharedPreferences.getString(SharedPreferenceHelper.userProviderKey) ??
+            "null";
     return pref == "null" || pref.isEmpty ? false : true;
   }
 
   bool isInappPurchaseAvalable() {
-    String pre = sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ?? '';
-    GeneralSettingsResponseModel model = GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
+    String pre =
+        sharedPreferences.getString(SharedPreferenceHelper.generalSettingKey) ??
+            '';
+    GeneralSettingsResponseModel model =
+        GeneralSettingsResponseModel.fromJson(jsonDecode(pre));
     bool iap = model.data?.generalSetting?.appPurchase == "1" ? true : false;
     return iap;
   }
+
+  post(String loginEndpoint, Map<String, String> body) {}
 }

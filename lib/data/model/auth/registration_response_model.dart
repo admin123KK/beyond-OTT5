@@ -1,6 +1,6 @@
 import 'package:play_lab/data/model/global/global_user_model.dart';
 
-import 'login_response_model.dart';
+import '../global/global_meassage.dart';
 
 class RegistrationResponseModel {
   RegistrationResponseModel({

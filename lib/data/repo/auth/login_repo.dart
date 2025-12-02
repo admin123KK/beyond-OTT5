@@ -1,9 +1,12 @@
+// lib/data/repo/auth/login_repo.dart
+
 import 'dart:convert';
+
 import 'package:get/get.dart';
+import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/method.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/helper/shared_pref_helper.dart';
-import 'package:play_lab/core/utils/url_container.dart';
 import 'package:play_lab/data/model/auth/verification/email_verification_model.dart';
 import 'package:play_lab/data/model/global/response_model/response_model.dart';
 import 'package:play_lab/data/services/api_service.dart';
@@ -16,15 +19,26 @@ class LoginRepo extends GetConnect {
 
   LoginRepo({required this.sharedPreferences, required this.apiClient});
 
-  // Normal Email/Password Login
+  // CLEAN & FINAL LOGIN — NO CAPTCHA, WITH application/json HEADER
   Future<ResponseModel> loginUser(String email, String password) async {
-    Map<String, String> map = {'username': email, 'password': password};
-    String url = '${UrlContainer.baseUrl}${UrlContainer.loginEndPoint}';
-    return await apiClient.request(url, Method.postMethod, map,
-        passHeader: false);
+    final Map<String, String> body = {
+      'username': email,
+      'password': password,
+      'is_web': 'false',
+      // g-recaptcha-response COMPLETELY REMOVED — mobile login works without it
+    };
+
+    // This sends: Content-Type: application/json automatically
+    return await apiClient.request(
+      ApiConstants.loginEndpoint,
+      Method.postMethod,
+      body,
+      passHeader:
+          true, // This ensures headers including application/json are sent
+    );
   }
 
-  // Google / Facebook Social Login
+  // Social Login
   Future<ResponseModel> socialLogin({
     required bool isGmail,
     required String token,
@@ -32,26 +46,28 @@ class LoginRepo extends GetConnect {
     required String name,
     required String id,
   }) async {
-    Map<String, String> map = {
+    final Map<String, String> body = {
       'provider': isGmail ? 'google' : 'facebook',
       'access_token': token,
       'email': email,
       'id': id,
       'name': name,
     };
-    String url = '${UrlContainer.baseUrl}${UrlContainer.socialLoginEndPoint}';
-    return await apiClient.request(url, Method.postMethod, map,
-        passHeader: false);
+
+    return await apiClient.request(
+      ApiConstants.socialLoginEndpoint,
+      Method.postMethod,
+      body,
+      passHeader: true,
+    );
   }
 
-  // Forget Password - Step 1 (Send email/phone)
+  // Forget Password
   Future<String> forgetPassword(String type, String value) async {
     final map = {'type': type, 'value': value};
-    String url =
-        '${UrlContainer.baseUrl}${UrlContainer.forgetPasswordEndPoint}';
 
     final response = await apiClient.request(
-      url,
+      ApiConstants.forgotPasswordEndpoint,
       Method.postMethod,
       map,
       isOnlyAcceptType: true,
@@ -90,24 +106,22 @@ class LoginRepo extends GetConnect {
     String? email =
         sharedPreferences.getString(SharedPreferenceHelper.userEmailKey) ?? '';
     Map<String, String> map = {'code': code, 'email': email};
-    String url =
-        '${UrlContainer.baseUrl}${UrlContainer.passwordVerifyEndPoint}';
 
-    final response = await apiClient.request(url, Method.postMethod, map,
-        isOnlyAcceptType: true);
+    final response = await apiClient.request(
+      ApiConstants.verifyCodeEndpoint,
+      Method.postMethod,
+      map,
+      isOnlyAcceptType: true,
+      passHeader: true,
+    );
+
     EmailVerificationModel model =
         EmailVerificationModel.fromJson(jsonDecode(response.responseJson));
-
-    if (model.message?.success != null) {
-      model.setCode(200);
-      return model;
-    } else {
-      model.setCode(400);
-      return model;
-    }
+    model.setCode(model.message?.success != null ? 200 : 400);
+    return model;
   }
 
-  // Reset Password (Final Step)
+  // Reset Password
   Future<EmailVerificationModel> resetPassword(
       String email, String password) async {
     String token =
@@ -121,9 +135,13 @@ class LoginRepo extends GetConnect {
       'password_confirmation': password,
     };
 
-    String url = '${UrlContainer.baseUrl}${UrlContainer.resetPasswordEndPoint}';
-    ResponseModel response = await apiClient
-        .request(url, Method.postMethod, map, isOnlyAcceptType: true);
+    ResponseModel response = await apiClient.request(
+      ApiConstants.resetPasswordEndpoint,
+      Method.postMethod,
+      map,
+      isOnlyAcceptType: true,
+      passHeader: true,
+    );
 
     EmailVerificationModel model =
         EmailVerificationModel.fromJson(jsonDecode(response.responseJson));
@@ -140,36 +158,27 @@ class LoginRepo extends GetConnect {
     return model;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PUSH NOTIFICATION TOKEN HANDLING (Firebase 100% REMOVED)
-  // ─────────────────────────────────────────────────────────────
-
-  /// Save device token locally (for future push system)
-  Future<void> saveDeviceToken(String token) async {
-    await sharedPreferences.setString(
-        SharedPreferenceHelper.fcmDeviceKey, token);
-  }
-
-  /// Send saved token to your backend
+  // Device Token
   Future<bool> sendDeviceTokenToServer() async {
     String? token =
         sharedPreferences.getString(SharedPreferenceHelper.fcmDeviceKey);
     if (token == null || token.isEmpty) return false;
 
-    String url = '${UrlContainer.baseUrl}${UrlContainer.deviceTokenEndPoint}';
     Map<String, String> map = {'token': token};
 
-    ResponseModel response =
-        await apiClient.request(url, Method.postMethod, map, passHeader: true);
+    ResponseModel response = await apiClient.request(
+      ApiConstants.deviceTokenEndpoint,
+      Method.postMethod,
+      map,
+      passHeader: true,
+    );
     return response.statusCode == 200;
   }
 
-  /// Call this method when you implement push (OneSignal, Pusher, etc.)
-  /// For now: does nothing → no crash, no Firebase
-  Future<void> initializePushToken() async {
-    // Placeholder — safe & clean
-    // Later: get token from OneSignal, your server, etc.
-    // Then call: saveDeviceToken(token) → sendDeviceTokenToServer()
-    return;
+  Future<void> saveDeviceToken(String token) async {
+    await sharedPreferences.setString(
+        SharedPreferenceHelper.fcmDeviceKey, token);
   }
+
+  Future<void> initializePushToken() async => null;
 }

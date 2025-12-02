@@ -221,3 +221,7 @@ class ForgetPasswordController extends GetxController {
     super.onClose();
   }
 }
+
+extension on LoginRepo {
+  resetPassword(String email, String password) {}
+}

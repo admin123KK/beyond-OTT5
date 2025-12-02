@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/data/model/auth/registration_response_model.dart';

@@ -1,4 +1,4 @@
-import 'package:play_lab/data/model/auth/login_response_model.dart';
+import 'package:play_lab/data/model/deposit/main_deposit_method_response_model.dart';
 import 'package:play_lab/data/model/global/tournament/tournament_model.dart';
 import 'package:play_lab/data/model/global/tournament/game_model.dart';
 import 'package:play_lab/data/model/global/telivision/telivision.dart';
@@ -20,7 +20,8 @@ class DepositHistoryMainResponseModel {
   DepositHistoryMainResponseModel.fromJson(dynamic json) {
     _remark = json['remark'];
     _status = json['status'].toString();
-    _message = json['message'] != null ? Message.fromJson(json['message']) : null;
+    _message =
+        json['message'] != null ? Message.fromJson(json['message']) : null;
     _mainData = json['data'] != null ? MainData.fromJson(json['data']) : null;
   }
 
@@ -56,7 +57,8 @@ class MainData {
   }
 
   MainData.fromJson(dynamic json) {
-    _deposits = json['deposits'] != null ? Deposits.fromJson(json['deposits']) : null;
+    _deposits =
+        json['deposits'] != null ? Deposits.fromJson(json['deposits']) : null;
   }
 
   Deposits? _deposits;
@@ -160,7 +162,8 @@ class HistoryData {
     _methodCurrency = json['method_currency'];
     _charge = json['charge'] != null ? json['charge'].toString() : '';
     _rate = json['rate'] != null ? json['rate'].toString() : '';
-    _finalAmo = json['final_amount'] != null ? json['final_amount'].toString() : '';
+    _finalAmo =
+        json['final_amount'] != null ? json['final_amount'].toString() : '';
     _detail = json['detail'];
     _btcAmo = json['btc_amo'] != null ? json['btc_amo'].toString() : '';
     _btcWallet = json['btc_wallet'].toString();
@@ -171,8 +174,11 @@ class HistoryData {
     _createdAt = json['created_at'];
     _updatedAt = json['updated_at'];
     _date = json['date'].toString();
-    _gateway = json['gateway'] != null ? Gateway.fromJson(json['gateway']) : null;
-    _subscription = json['subscription'] != null ? Subscription.fromJson(json['subscription']) : null;
+    _gateway =
+        json['gateway'] != null ? Gateway.fromJson(json['gateway']) : null;
+    _subscription = json['subscription'] != null
+        ? Subscription.fromJson(json['subscription'])
+        : null;
   }
 
   int? _id;
@@ -345,7 +351,8 @@ class Extra {
   }
 
   Extra.fromJson(dynamic json) {
-    _webhook = json['webhook'] != null ? Webhook.fromJson(json['webhook']) : null;
+    _webhook =
+        json['webhook'] != null ? Webhook.fromJson(json['webhook']) : null;
   }
 
   Webhook? _webhook;
@@ -406,8 +413,12 @@ class Subscription {
   Subscription.fromJson(dynamic json) {
     _plan = json['plan'] != null ? Plan.fromJson(json['plan']) : null;
     _item = json['item'] != null ? Item.fromJson(json['item']) : null;
-    _channel = json['channel_category'] != null ? Telivison.fromJson(json['channel_category']) : null;
-    _tournament = json['tournament'] != null ? TournamentModel.fromJson(json['tournament']) : null;
+    _channel = json['channel_category'] != null
+        ? Telivison.fromJson(json['channel_category'])
+        : null;
+    _tournament = json['tournament'] != null
+        ? TournamentModel.fromJson(json['tournament'])
+        : null;
     _game = json['game'] != null ? GameModel.fromJson(json['game']) : null;
   }
 
