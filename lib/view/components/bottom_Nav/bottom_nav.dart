@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -7,7 +5,6 @@ import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/data/services/api_service.dart';
-
 import '../../../core/route/route.dart';
 import 'my_bottom_nav_bar_widget.dart';
 

@@ -29,7 +29,6 @@ import 'package:play_lab/view/screens/tournament/tournament_details_screen.dart'
 import 'package:play_lab/view/screens/tournament/tournament_list_screen.dart';
 import 'package:play_lab/view/screens/watch_history/my_watch_history.dart';
 import 'package:play_lab/view/screens/wish_list/wish_list_screen.dart';
-
 import '../../view/screens/about/privacy_screen.dart';
 import '../../view/screens/account/chagne_password/change_password.dart';
 import '../../view/screens/account/payment_log_screen/transaction_log_screen.dart';

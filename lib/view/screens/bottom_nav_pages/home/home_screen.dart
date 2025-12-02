@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
 import 'package:play_lab/constants/my_strings.dart';

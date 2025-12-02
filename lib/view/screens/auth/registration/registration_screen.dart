@@ -1,11 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:play_lab/data/model/auth/register_repo.dart';
 import 'package:play_lab/view/will_pop_widget.dart';
 
 import '../../../../constants/my_strings.dart';
 import '../../../../core/route/route.dart';
-import '../../../../core/utils/dimensions.dart';
 import '../../../../core/utils/my_color.dart';
 import '../../../../core/utils/my_images.dart';
 import '../../../../core/utils/styles.dart';
@@ -14,7 +14,7 @@ import '../../../components/bg_widget/bg_image_widget.dart';
 import '../../../components/bottom_Nav/bottom_nav.dart';
 import '../../../components/buttons/rounded_button.dart';
 import '../../../components/buttons/rounded_loading_button.dart';
-import '../../../components/custom_text_form_field.dart'; // Same as Login uses
+import '../../../components/custom_text_form_field.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -28,12 +28,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _isLoading = false;
   bool _agreeTC = false;
 
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -42,20 +46,73 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   void _signUp() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (!_agreeTC) {
-      // Get.snackbar("Error", MyStrings.pleaseAgreeWithPolicies.tr,
-      //     backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        "Error".tr,
+        MyStrings.policies.tr,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2)); // Fake delay
+
+    final repo = RegisterRepo();
+    final response = await repo.registerUser(
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      passwordConfirmation: _confirmPasswordController.text,
+    );
+
     setState(() => _isLoading = false);
 
-    Get.snackbar("Success", "Account created successfully!".tr,
-        backgroundColor: MyColor.primaryColor, colorText: Colors.white);
+    // SUCCESS CHECK – Works with your real backend response
+    bool isSuccess = response.remark == "success" ||
+        response.status == "success" ||
+        (response.data?.accessToken != null &&
+            response.data!.accessToken!.isNotEmpty);
 
-    Get.offAllNamed(RouteHelper.loginScreen);
+    if (isSuccess) {
+      // SUCCESS – Show message + Go to Home
+      Get.snackbar(
+        "Success".tr,
+        "Account created successfully!".tr,
+        backgroundColor: MyColor.primaryColor,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(12),
+      );
+
+      // Navigate to Home / Bottom Navigation
+      Get.offAllNamed(RouteHelper.loginScreen);
+      // Or use: RouteHelper.homeScreen if you have it
+    } else {
+      // ERROR – Show real backend message
+      String errorMsg = "Registration failed. Please try again.";
+
+      if (response.message?.error != null &&
+          response.message!.error!.isNotEmpty) {
+        errorMsg = response.message!.error!.join("\n");
+      } else if (response.message?.success != null &&
+          response.message!.success!.isNotEmpty) {
+        errorMsg = response.message!.success!.join("\n");
+      }
+
+      Get.snackbar(
+        "Error".tr,
+        errorMsg,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 8),
+        margin: const EdgeInsets.all(12),
+      );
+    }
   }
 
   @override
@@ -71,9 +128,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           width: MediaQuery.of(context).size.width,
           child: Stack(
             children: [
-              // Same background as Login
               const MyBgWidget(image: MyImages.onboardingBG),
-
               SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: Form(
@@ -85,6 +140,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const AuthImageWidget(),
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.06),
+
+                      // First Name
+                      InputTextFieldWidget(
+                        fillColor: Colors.grey[600]!.withOpacity(0.3),
+                        hintTextColor: Colors.white,
+                        controller: _firstNameController,
+                        hintText: "First Name",
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter your first name".tr;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Last Name
+                      InputTextFieldWidget(
+                        fillColor: Colors.grey[600]!.withOpacity(0.3),
+                        hintTextColor: Colors.white,
+                        controller: _lastNameController,
+                        hintText: "Last Name",
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter your last name".tr;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
 
                       // Email
                       InputTextFieldWidget(
@@ -185,29 +270,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const SizedBox(height: 50),
 
                       // Already have account?
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Text(
-                          //   MyStrings.alreadyHaveAccount,
-                          //   style: mulishSemiBold.copyWith(
-                          //     color: MyColor.colorWhite,
-                          //     fontSize: Dimensions.fontLarge,
-                          //   ),
-                          // ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () =>
-                                Get.offAllNamed(RouteHelper.loginScreen),
-                            child: Text(
-                              MyStrings.signIn.tr,
-                              style: mulishBold.copyWith(
-                                color: MyColor.primaryColor,
-                                fontSize: 18,
-                              ),
-                            ),
+                      GestureDetector(
+                        onTap: () => Get.offAllNamed(RouteHelper.loginScreen),
+                        child: Text(
+                          MyStrings.signIn.tr,
+                          style: mulishBold.copyWith(
+                            color: MyColor.primaryColor,
+                            fontSize: 18,
                           ),
-                        ],
+                        ),
                       ),
 
                       SizedBox(
