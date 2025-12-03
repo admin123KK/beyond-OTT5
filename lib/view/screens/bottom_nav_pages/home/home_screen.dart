@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:get/Get.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
@@ -25,94 +29,108 @@ class _HomeScreenState extends State<HomeScreen>
   final PageController _pageController = PageController();
   final TextEditingController _searchController = TextEditingController();
 
-  // YOUR ORIGINAL DATA — 100% UNCHANGED
-  final List<Map<String, String>> featuredMovies = [
-    {
-      "title": "John Wick: Chapter 4",
-      "image":
-          "https://tse1.mm.bing.net/th/id/OIP.4LoVG7nt06NwWxjAmb19cAHaQC?w=1125&h=2436&rs=1&pid=ImgDetMain&o=7&rm=3",
-      "year": "2023"
-    },
-    {
-      "title": "Dune: Part Two",
-      "image": "https://wallpaperaccess.com/full/12948324.jpg",
-      "year": "2024"
-    },
-    {
-      "title": "Deadpool & Wolverine",
-      "image":
-          "https://m.media-amazon.com/images/S/pv-target-images/dd6fb66997dd4cb5606b587bb255d2cd2cec20ecbd11852a8f6b07a1358d09a1.jpg",
-      "year": "2024"
-    },
-    {
-      "title": "Oppenheimer",
-      "image":
-          "https://tse2.mm.bing.net/th/id/OIP.fZoBEzk6so-Pj033wxwmNwHaLH?rs=1&pid=ImgDetMain&o=7&rm=3",
-      "year": "2023"
-    },
-  ];
+  // API Data
+  bool _isLoading = true;
+  String? _error;
 
-  final List<String> moviePosters = [
-    'https://tse2.mm.bing.net/th/id/OIP.fZoBEzk6so-Pj033wxwmNwHaLH?rs=1&pid=ImgDetMain&o=7&rm=3',
-    'https://th.bing.com/th/id/OIP.CmNSUluwE9FL_OcSpIAL-QHaEK?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
-    'https://tse3.mm.bing.net/th/id/OIP.ZnfrTsth1Ca7moFTyz7RagHaHX?rs=1&pid=ImgDetMain&o=7&rm=3',
-    'https://tse3.mm.bing.net/th/id/OIP.8oCtyV0T7Lp3_kSCnC54iAHaEy?w=2560&h=1658&rs=1&pid=ImgDetMain&o=7&rm=3',
-    'https://tse2.mm.bing.net/th/id/OIP.WORJuyzM08Mjh74Qhwc8WwHaEK?w=2560&h=1440&rs=1&pid=ImgDetMain&o=7&rm=3',
-    'https://tse2.mm.bing.net/th/id/OIP.dFgVSa2bzwKuuTxKlBIppgHaEo?rs=1&pid=ImgDetMain&o=7&rm=3',
-  ];
+  List<dynamic> sliders = [];
+  List<dynamic> liveChannels = [];
+  List<dynamic> recentlyAdded = [];
+  List<dynamic> freeZone = [];
+  List<dynamic> featured = [];
 
-  final List<Map<String, String>> latestSeriesPosters = [
-    {
-      "title": "Money Heist",
-      "image": "https://image.tmdb.org/t/p/w500/reEMJA1uzscCbkpeRJeTT2bjqUp.jpg"
-    },
-    {
-      "title": "Stranger Things",
-      "image":
-          "https://cdn.shopify.com/s/files/1/0522/8222/8911/files/touts-st-4.png?v=16518873278"
-    },
-    {
-      "title": "Squid Game",
-      "image":
-          "https://static1.srcdn.com/wordpress/wp-content/uploads/2023/11/two-players-threaten-to-sue-netflix-over-alleged-injuries-from-squid-games_-the-challenge-1.jpg"
-    },
-    {
-      "title": "The Witcher",
-      "image":
-          "https://tse3.mm.bing.net/th/id/OIP.ccydwWZcSpR6LeM03sgscwHaEo?rs=1&pid=ImgDetMain&o=7&rm=3"
-    },
-    {
-      "title": "Wednesday",
-      "image":
-          "https://tse3.mm.bing.net/th/id/OIP.QcAfhVjLv507FbRsDqG1MAHaK-?rs=1&pid=ImgDetMain&o=7&rm=3"
-    },
-    {
-      "title": "Loki",
-      "image":
-          "https://static1.colliderimages.com/wordpress/wp-content/uploads/2023/11/tom-hiddlestone-god-loki-season-2-poster.jpg"
-    },
-    {
-      "title": "The Crown",
-      "image":
-          "https://www.thereelness.com/wp-content/uploads/2018/03/C880D986-E3DB-47F1-98E3-E2BF74ED7160.jpeg"
-    },
-  ];
+  String portraitBaseUrl = "";
+  String landscapeBaseUrl = "";
+  String tvBaseUrl = "";
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_currentPage < featuredMovies.length - 1) {
-        _currentPage++;
-      } else {
-        _currentPage = 0;
-      }
-      if (_pageController.hasClients) {
-        _pageController.animateToPage(_currentPage,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOut);
-      }
+
+    // Auto slider
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (featuredMovies.isEmpty || !_pageController.hasClients) return;
+      setState(() {
+        _currentPage =
+            _currentPage < featuredMovies.length - 1 ? _currentPage + 1 : 0;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+        );
+      });
     });
+
+    fetchDashboard();
+  }
+
+  Future<void> fetchDashboard() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.deviceDashboardEndpoint),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['status'] == 'success') {
+          final data = json['data']['data'];
+          final path = json['data']['path'];
+
+          setState(() {
+            sliders = data['sliders'] ?? [];
+            liveChannels = data['televisions']?['data'] ?? [];
+            recentlyAdded = data['recently_added'] ?? [];
+            freeZone = data['free_zone'] ?? [];
+            featured = data['featured'] ?? [];
+
+            portraitBaseUrl =
+                "https://ott.beyondtechnepal.com/${path['portrait']}";
+            landscapeBaseUrl =
+                "https://ott.beyondtechnepal.com/${path['landscape']}";
+            tvBaseUrl = "https://ott.beyondtechnepal.com/${path['television']}";
+            _isLoading = false;
+          });
+        } else {
+          throw Exception(json['message'] ?? 'Failed to load');
+        }
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString().contains('Timeout')
+            ? 'No internet connection'
+            : 'Something went wrong';
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get featuredMovies {
+    final source =
+        featured.isNotEmpty ? featured : recentlyAdded.take(6).toList();
+    return source.map((item) {
+      final img =
+          item['image']?['landscape'] ?? item['image']?['portrait'] ?? '';
+      final url = img.isEmpty
+          ? "https://via.placeholder.com/800x1200/222222/FFFFFF?text=${item['title']?.substring(0, 2).toUpperCase()}"
+          : img.startsWith('http')
+              ? img
+              : "$landscapeBaseUrl$img";
+
+      return {
+        "title": item['title'] ?? "Untitled",
+        "image": url,
+        "year": item['created_at']?.substring(0, 4) ?? "2025",
+        "slug": item['slug']?.toString() ?? "",
+      };
+    }).toList();
   }
 
   @override
@@ -136,250 +154,240 @@ class _HomeScreenState extends State<HomeScreen>
       bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
       body: SafeArea(
         child: RefreshIndicator(
+          onRefresh: fetchDashboard,
           color: MyColor.primaryColor,
-          backgroundColor: MyColor.cardBg,
-          onRefresh: () async => Future.delayed(const Duration(seconds: 1)),
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics()),
-            slivers: [
-              SliverAppBar(
-                backgroundColor: MyColor.colorBlack,
-                elevation: 0,
-                pinned: true,
-                expandedHeight: _isSearchVisible ? 170 : 110,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 10),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Image.asset(MyImages.logo,
-                                height: 55, fit: BoxFit.contain),
-                            InkWell(
-                              onTap: () => setState(
-                                  () => _isSearchVisible = !_isSearchVisible),
-                              borderRadius: BorderRadius.circular(30),
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: const BoxDecoration(
-                                    color: MyColor.bgColor,
-                                    shape: BoxShape.circle),
-                                child: Icon(
-                                    _isSearchVisible
-                                        ? Icons.close
-                                        : Icons.search_rounded,
-                                    color: Colors.white,
-                                    size: 22),
-                              ),
-                            ),
-                          ],
-                        ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: _isSearchVisible ? 70 : 0,
-                          child: _isSearchVisible
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 15),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
-                                      hintText: MyStrings.search,
-                                      hintStyle: const TextStyle(
-                                          color: Colors.white38),
-                                      filled: true,
-                                      fillColor: MyColor.textFiledFillColor,
-                                      prefixIcon: const Icon(Icons.search,
-                                          color: Colors.white70),
-                                      suffixIcon: IconButton(
-                                        icon: const Icon(
-                                            Icons.arrow_forward_ios,
-                                            color: Colors.white),
-                                        onPressed: () {
-                                          final query =
-                                              _searchController.text.trim();
-                                          if (query.isNotEmpty) {
-                                            Get.to(() => SearchScreen(
-                                                searchText: query));
-                                          }
-                                        },
-                                      ),
-                                      border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                          borderSide: BorderSide.none),
-                                    ),
-                                    onSubmitted: (value) {
-                                      if (value.trim().isNotEmpty) {
-                                        Get.to(() => SearchScreen(
-                                            searchText: value.trim()));
-                                      }
-                                    },
-                                  ),
-                                )
-                              : const SizedBox(),
+          child: _isLoading
+              ? _buildLoading()
+              : _error != null
+                  ? _buildError()
+                  : CustomScrollView(
+                      physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics()),
+                      slivers: [
+                        _buildAppBar(),
+                        _buildHeroSlider(),
+                        SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 20),
+                              if (liveChannels.isNotEmpty) ...[
+                                _buildSectionTitle(MyStrings.liveTV,
+                                    RouteHelper.allLiveTVScreen),
+                                _buildLiveTVList(),
+                                const SizedBox(height: 20),
+                              ],
+                              if (recentlyAdded.isNotEmpty) ...[
+                                _buildSectionTitle(
+                                    "New Releases", RouteHelper.allMovieScreen),
+                                _buildMoviesList(),
+                                const SizedBox(height: 20),
+                              ],
+                              if (freeZone.isNotEmpty) ...[
+                                _buildSectionTitle(MyStrings.ourFreeZone,
+                                    RouteHelper.allFreeZoneScreen),
+                                _buildFreeZoneList(),
+                                const SizedBox(height: 20),
+                              ],
+                              const SizedBox(height: 100),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: AspectRatio(
-                  aspectRatio: 0.85,
-                  child: Stack(
-                    children: [
-                      PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (i) => setState(() => _currentPage = i),
-                        itemCount: featuredMovies.length,
-                        itemBuilder: (context, index) {
-                          final movie = featuredMovies[index];
-                          return _buildFeaturedMovieItem(
-                            imageUrl: movie["image"]!,
-                            title: movie["title"]!,
-                            year: movie["year"]!,
-                          );
-                        },
-                      ),
-                      Positioned(
-                        bottom: 20,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                              featuredMovies.length,
-                              (i) => AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                    width: _currentPage == i ? 24 : 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                        color: _currentPage == i
-                                            ? MyColor.primaryColor
-                                            : Colors.white54,
-                                        borderRadius: BorderRadius.circular(4)),
-                                  )),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildSectionTitle(
-                        MyStrings.liveTV, RouteHelper.allLiveTVScreen),
-                    _buildLiveTVList(),
-                    const SizedBox(height: 15),
-                    _buildSectionTitle("Movies", RouteHelper.allMovieScreen),
-                    _buildMoviesList(),
-                    const SizedBox(height: 15),
-                    _buildSectionTitle(
-                        MyStrings.latestSeries, RouteHelper.allEpisodeScreen),
-                    _buildLatestSeriesList(),
-                    const SizedBox(height: 15),
-                    _buildSectionTitle(
-                        MyStrings.ourFreeZone, RouteHelper.allFreeZoneScreen),
-                    _buildHorizontalList(Colors.purpleAccent, "Free Content"),
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
-  Widget _buildFeaturedMovieItem(
-      {required String imageUrl, required String title, required String year}) {
-    return InkWell(
-      onTap: () {
-        Get.toNamed(RouteHelper.watchMovie, arguments: {
-          'title': title,
-          'coverImage': imageUrl,
-          'year': year,
-        });
-      },
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-            image: DecorationImage(
-                image: NetworkImage(imageUrl), fit: BoxFit.cover)),
-        child: Stack(
+  Widget _buildLoading() => const Center(
+      child: CircularProgressIndicator(color: MyColor.primaryColor));
+
+  Widget _buildError() => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.95)
+            const Icon(Icons.wifi_off, size: 80, color: Colors.white38),
+            const SizedBox(height: 16),
+            Text(_error!, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+                onPressed: fetchDashboard, child: const Text("Retry")),
+          ],
+        ),
+      );
+
+  Widget _buildAppBar() => SliverAppBar(
+        backgroundColor: MyColor.colorBlack,
+        elevation: 0,
+        pinned: true,
+        expandedHeight: _isSearchVisible ? 170 : 110,
+        flexibleSpace: FlexibleSpaceBar(
+          background: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Image.asset(MyImages.logo, height: 55, fit: BoxFit.contain),
+                    InkWell(
+                      onTap: () =>
+                          setState(() => _isSearchVisible = !_isSearchVisible),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                            color: MyColor.bgColor, shape: BoxShape.circle),
+                        child: Icon(
+                            _isSearchVisible ? Icons.close : Icons.search,
+                            color: Colors.white,
+                            size: 24),
+                      ),
+                    ),
+                  ],
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _isSearchVisible ? 70 : 0,
+                  child: _isSearchVisible
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 15),
+                          child: TextField(
+                            controller: _searchController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: MyStrings.search,
+                              hintStyle: const TextStyle(color: Colors.white38),
+                              filled: true,
+                              fillColor: MyColor.textFiledFillColor,
+                              prefixIcon: const Icon(Icons.search,
+                                  color: Colors.white70),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  borderSide: BorderSide.none),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.arrow_forward_ios,
+                                    color: Colors.white),
+                                onPressed: () {
+                                  final q = _searchController.text.trim();
+                                  if (q.isNotEmpty)
+                                    Get.to(() => SearchScreen(searchText: q));
+                                },
+                              ),
+                            ),
+                            onSubmitted: (q) => q.trim().isNotEmpty
+                                ? Get.to(
+                                    () => SearchScreen(searchText: q.trim()))
+                                : null,
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildHeroSlider() => SliverToBoxAdapter(
+        child: featuredMovies.isEmpty
+            ? const SizedBox(
+                height: 400,
+                child: Center(
+                    child: Text("No Featured Content",
+                        style: TextStyle(color: Colors.white38))))
+            : AspectRatio(
+                aspectRatio: 0.85,
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      itemCount: featuredMovies.length,
+                      itemBuilder: (_, i) {
+                        final m = featuredMovies[i];
+                        return _buildFeaturedItem(
+                            m["image"]!, m["title"]!, m["year"]!, m["slug"]!);
+                      },
+                    ),
+                    Positioned(
+                      bottom: 20,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          featuredMovies.length,
+                          (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == i ? 28 : 10,
+                            height: 8,
+                            decoration: BoxDecoration(
+                                color: _currentPage == i
+                                    ? MyColor.primaryColor
+                                    : Colors.white54,
+                                borderRadius: BorderRadius.circular(4)),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(color: Colors.black, blurRadius: 10)
-                          ])),
-                  const SizedBox(height: 8),
-                  Text("Released in $year • Action • Thriller",
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Get.toNamed(RouteHelper.watchMovie, arguments: {
-                        'title': title,
-                        'coverImage': imageUrl,
-                        'year': year,
-                      });
-                    },
-                    icon: const Icon(Icons.play_arrow,
-                        size: 28, color: Colors.white),
-                    label: const Text("Watch Now",
-                        style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
+      );
+
+  Widget _buildFeaturedItem(
+          String img, String title, String year, String slug) =>
+      InkWell(
+        onTap: () =>
+            Get.toNamed(RouteHelper.movieDetailsScreen, arguments: slug),
+        child: Container(
+          decoration: BoxDecoration(
+              image:
+                  DecorationImage(image: NetworkImage(img), fit: BoxFit.cover)),
+          child: Container(
+            decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black87])),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(blurRadius: 10, color: Colors.black)
+                        ])),
+                Text("$year • Tap to Watch",
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => Get.toNamed(RouteHelper.movieDetailsScreen,
+                      arguments: slug),
+                  icon: const Icon(Icons.play_arrow, size: 28),
+                  label:
+                      const Text("Watch Now", style: TextStyle(fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
                       backgroundColor: MyColor.primaryColor,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 14),
+                          horizontal: 32, vertical: 16),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                    ),
-                  ),
-                ],
-              ),
+                          borderRadius: BorderRadius.circular(30))),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildSectionTitle(String title, String route) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
@@ -387,10 +395,10 @@ class _HomeScreenState extends State<HomeScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title,
-                style: mulishBold.copyWith(color: Colors.white, fontSize: 18)),
+                style: mulishBold.copyWith(color: Colors.white, fontSize: 19)),
             GestureDetector(
                 onTap: () => Get.toNamed(route),
-                child: Text("See All",
+                child: Text("See All >",
                     style: mulishSemiBold.copyWith(
                         color: MyColor.primaryColor, fontSize: 14))),
           ],
@@ -398,61 +406,62 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
   Widget _buildLiveTVList() => SizedBox(
+      height: 180, child: _buildHorizontalList(liveChannels, isLive: true));
+  Widget _buildMoviesList() =>
+      SizedBox(height: 180, child: _buildHorizontalList(recentlyAdded));
+  Widget _buildFreeZoneList() => SizedBox(
       height: 180,
-      child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          scrollDirection: Axis.horizontal,
-          itemCount: 10,
-          itemBuilder: (c, i) => _buildChannelItem(
-              imageUrl:
-                  'https://yt3.googleusercontent.com/-7k9f25VwXdzn77vsMP6wgF8FL4i4p-LycW6EeYQCNOfnYFz1BLIrGgc4X3RZg116L8fsxFJ_A=s900-c-k-c0x-state-no-rj',
-              label: "Live Channel",
-              title: "Live TV Stream",
-              year: "2025",
-              baseColor: Colors.redAccent)));
+      child: _buildHorizontalList(freeZone,
+          badge: "FREE", badgeColor: Colors.green));
 
-  Widget _buildMoviesList() => SizedBox(
-      height: 180,
-      child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          scrollDirection: Axis.horizontal,
-          itemCount: moviePosters.length,
-          itemBuilder: (c, i) => _buildChannelItem(
-              imageUrl: moviePosters[i],
-              label: "Action Movie",
-              title: "Featured Movie",
-              year: "2024",
-              baseColor: Colors.blueAccent)));
+  Widget _buildHorizontalList(List<dynamic> items,
+          {bool isLive = false, String? badge, Color? badgeColor}) =>
+      ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (context, i) {
+          final item = items[i];
+          final imgPath = isLive
+              ? item['image']
+              : (item['image']?['portrait'] ??
+                  item['image']?['landscape'] ??
+                  '');
+          final imgUrl = imgPath == null || imgPath.toString().isEmpty
+              ? "https://via.placeholder.com/300"
+              : imgPath.toString().startsWith('http')
+                  ? imgPath.toString()
+                  : isLive
+                      ? "https://ott.beyondtechnepal.com/$tvBaseUrl$imgPath"
+                      : "$portraitBaseUrl$imgPath";
 
-  Widget _buildLatestSeriesList() => SizedBox(
-      height: 180,
-      child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          scrollDirection: Axis.horizontal,
-          itemCount: latestSeriesPosters.length,
-          itemBuilder: (c, i) => _buildChannelItem(
-              imageUrl: latestSeriesPosters[i]["image"]!,
-              label: latestSeriesPosters[i]["title"]!,
-              title: latestSeriesPosters[i]["title"]!,
-              year: "2024-2025",
-              baseColor: Colors.purpleAccent)));
+          return _buildPoster(
+            imageUrl: imgUrl,
+            title: item['title'] ?? "Unknown",
+            onTap: () {
+              final route = isLive
+                  ? RouteHelper.allLiveTVScreen
+                  : RouteHelper.movieDetailsScreen;
+              final arg = isLive ? item['id'] : item['slug'];
+              Get.toNamed(route, arguments: arg);
+            },
+            isLive: isLive,
+            badgeText: badge,
+            badgeColor: badgeColor,
+          );
+        },
+      );
 
-  // UPDATED: Now navigates to WatchMovieDetailsScreen on tap
-  Widget _buildChannelItem({
+  Widget _buildPoster({
     required String imageUrl,
-    required String label,
     required String title,
-    required String year,
-    required Color baseColor,
+    required VoidCallback onTap,
+    bool isLive = false,
+    String? badgeText,
+    Color? badgeColor,
   }) {
     return InkWell(
-      onTap: () {
-        Get.toNamed(RouteHelper.watchMovie, arguments: {
-          'title': title,
-          'coverImage': imageUrl,
-          'year': year,
-        });
-      },
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: 120,
@@ -461,38 +470,54 @@ class _HomeScreenState extends State<HomeScreen>
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             children: [
-              Positioned.fill(
-                child: Image.network(
-                  imageUrl,
+              Image.network(imageUrl,
                   fit: BoxFit.cover,
-                  loadingBuilder: (c, child, p) => p == null
+                  width: double.infinity,
+                  height: double.infinity,
+                  loadingBuilder: (_, child, progress) => progress == null
                       ? child
                       : Container(
-                          color: baseColor.withOpacity(0.3),
+                          color: Colors.grey[850],
                           child: const Center(
                               child: CircularProgressIndicator(
-                                  color: MyColor.primaryColor,
-                                  strokeWidth: 2))),
+                                  strokeWidth: 2,
+                                  color: MyColor.primaryColor))),
                   errorBuilder: (_, __, ___) => Container(
-                      color: baseColor.withOpacity(0.3),
+                      color: Colors.grey[850],
                       child: const Icon(Icons.broken_image,
-                          color: Colors.white54)),
-                ),
-              ),
+                          color: Colors.white38))),
+              if (isLive)
+                const Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Chip(
+                        label: Text("LIVE", style: TextStyle(fontSize: 9)),
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.zero)),
+              if (badgeText != null)
+                Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Chip(
+                        label: Text(badgeText,
+                            style: const TextStyle(fontSize: 9)),
+                        backgroundColor: badgeColor,
+                        padding: EdgeInsets.zero)),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    color: Colors.black.withOpacity(0.8),
-                    child: Text(label,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis)),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.black.withOpacity(0.8),
+                  child: Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ),
               ),
             ],
           ),
@@ -500,38 +525,4 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-
-  Widget _buildHorizontalList(Color color, String label) => SizedBox(
-      height: 180,
-      child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          scrollDirection: Axis.horizontal,
-          itemCount: 8,
-          itemBuilder: (c, i) => InkWell(
-                onTap: () {
-                  Get.toNamed(RouteHelper.watchMovie, arguments: {
-                    'title': "Free Zone Content",
-                    'coverImage':
-                        'https://via.placeholder.com/300x450/333333/FFFFFF?text=Free+Content',
-                    'year': "2025",
-                  });
-                },
-                child: Container(
-                    width: 120,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                        color: color.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.play_circle_outline,
-                              size: 50, color: color),
-                          const SizedBox(height: 10),
-                          Text(label,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 12),
-                              textAlign: TextAlign.center)
-                        ])),
-              )));
 }

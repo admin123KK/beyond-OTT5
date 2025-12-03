@@ -5,12 +5,14 @@
 import 'dart:convert';
 
 import 'package:play_lab/data/model/global/common_api_response_model.dart';
-import 'package:play_lab/data/model/global/tournament/tournament_model.dart';
 import 'package:play_lab/data/model/global/telivision/channel.dart';
+import 'package:play_lab/data/model/global/tournament/tournament_model.dart';
 
-DashBoardResponseModel projectPlanResponseModelFromJson(String str) => DashBoardResponseModel.fromJson(json.decode(str));
+DashBoardResponseModel projectPlanResponseModelFromJson(String str) =>
+    DashBoardResponseModel.fromJson(json.decode(str));
 
-String projectPlanResponseModelToJson(DashBoardResponseModel data) => json.encode(data.toJson());
+String projectPlanResponseModelToJson(DashBoardResponseModel data) =>
+    json.encode(data.toJson());
 
 class DashBoardResponseModel {
   String? remark;
@@ -25,11 +27,15 @@ class DashBoardResponseModel {
     this.data,
   });
 
-  factory DashBoardResponseModel.fromJson(Map<String, dynamic> json) => DashBoardResponseModel(
+  factory DashBoardResponseModel.fromJson(Map<String, dynamic> json) =>
+      DashBoardResponseModel(
         remark: json["remark"],
         status: json["status"],
-        message: json["message"] == null ? null : Message.fromJson(json["message"]),
-        data: json["data"] == null ? null : DashBoardResponseModelData.fromJson(json["data"]),
+        message:
+            json["message"] == null ? null : Message.fromJson(json["message"]),
+        data: json["data"] == null
+            ? null
+            : DashBoardResponseModelData.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -49,7 +55,8 @@ class DashBoardResponseModelData {
     this.path,
   });
 
-  factory DashBoardResponseModelData.fromJson(Map<String, dynamic> json) => DashBoardResponseModelData(
+  factory DashBoardResponseModelData.fromJson(Map<String, dynamic> json) =>
+      DashBoardResponseModelData(
         data: json["data"] == null ? null : MainData.fromJson(json["data"]),
         path: json["path"] == null ? null : Path.fromJson(json["path"]),
       );
@@ -87,28 +94,73 @@ class MainData {
   });
 
   factory MainData.fromJson(Map<String, dynamic> json) => MainData(
-        sliders: json["sliders"] == null ? [] : List<Slider>.from(json["sliders"]!.map((x) => Slider.fromJson(x))),
-        televisions: json["televisions"] == null ? null : TelevisionData.fromJson(json['televisions']),
-        featured: json["featured"] == null ? [] : List<Featured>.from(json["featured"]!.map((x) => Featured.fromJson(x))),
-        tournaments: json["tournaments"] == null ? [] : List<TournamentModel>.from(json["tournaments"]!.map((x) => TournamentModel.fromJson(x))),
-        recentlyAdded: json["recently_added"] == null ? [] : List<Featured>.from(json["recently_added"]!.map((x) => Featured.fromJson(x))),
-        latestSeries: json["latest_series"] == null ? [] : List<Featured>.from(json["latest_series"]!.map((x) => Featured.fromJson(x))),
-        single: json["single"] == null ? [] : List<Featured>.from(json["single"]!.map((x) => Featured.fromJson(x))),
-        trailer: json["trailer"] == null ? [] : List<Featured>.from(json["trailer"]!.map((x) => Featured.fromJson(x))),
-        rent: json["rent"] == null ? [] : List<Featured>.from(json["rent"]!.map((x) => Featured.fromJson(x))),
-        freeZone: json["free_zone"] == null ? [] : List<Featured>.from(json["free_zone"]!.map((x) => Featured.fromJson(x))),
+        sliders: json["sliders"] == null
+            ? []
+            : List<Slider>.from(
+                json["sliders"]!.map((x) => Slider.fromJson(x))),
+        televisions: json["televisions"] == null
+            ? null
+            : TelevisionData.fromJson(json['televisions']),
+        featured: json["featured"] == null
+            ? []
+            : List<Featured>.from(
+                json["featured"]!.map((x) => Featured.fromJson(x))),
+        tournaments: json["tournaments"] == null
+            ? []
+            : List<TournamentModel>.from(
+                json["tournaments"]!.map((x) => TournamentModel.fromJson(x))),
+        recentlyAdded: json["recently_added"] == null
+            ? []
+            : List<Featured>.from(
+                json["recently_added"]!.map((x) => Featured.fromJson(x))),
+        latestSeries: json["latest_series"] == null
+            ? []
+            : List<Featured>.from(
+                json["latest_series"]!.map((x) => Featured.fromJson(x))),
+        single: json["single"] == null
+            ? []
+            : List<Featured>.from(
+                json["single"]!.map((x) => Featured.fromJson(x))),
+        trailer: json["trailer"] == null
+            ? []
+            : List<Featured>.from(
+                json["trailer"]!.map((x) => Featured.fromJson(x))),
+        rent: json["rent"] == null
+            ? []
+            : List<Featured>.from(
+                json["rent"]!.map((x) => Featured.fromJson(x))),
+        freeZone: json["free_zone"] == null
+            ? []
+            : List<Featured>.from(
+                json["free_zone"]!.map((x) => Featured.fromJson(x))),
         advertise: json["advertise"],
       );
 
   Map<String, dynamic> toJson() => {
-        "sliders": sliders == null ? [] : List<dynamic>.from(sliders!.map((x) => x.toJson())),
-        "featured": featured == null ? [] : List<dynamic>.from(featured!.map((x) => x.toJson())),
-        "recently_added": recentlyAdded == null ? [] : List<dynamic>.from(recentlyAdded!.map((x) => x.toJson())),
-        "latest_series": latestSeries == null ? [] : List<dynamic>.from(latestSeries!.map((x) => x.toJson())),
-        "single": single == null ? [] : List<dynamic>.from(single!.map((x) => x.toJson())),
-        "trailer": trailer == null ? [] : List<dynamic>.from(trailer!.map((x) => x.toJson())),
-        "rent": rent == null ? [] : List<dynamic>.from(rent!.map((x) => x.toJson())),
-        "free_zone": freeZone == null ? [] : List<dynamic>.from(freeZone!.map((x) => x.toJson())),
+        "sliders": sliders == null
+            ? []
+            : List<dynamic>.from(sliders!.map((x) => x.toJson())),
+        "featured": featured == null
+            ? []
+            : List<dynamic>.from(featured!.map((x) => x.toJson())),
+        "recently_added": recentlyAdded == null
+            ? []
+            : List<dynamic>.from(recentlyAdded!.map((x) => x.toJson())),
+        "latest_series": latestSeries == null
+            ? []
+            : List<dynamic>.from(latestSeries!.map((x) => x.toJson())),
+        "single": single == null
+            ? []
+            : List<dynamic>.from(single!.map((x) => x.toJson())),
+        "trailer": trailer == null
+            ? []
+            : List<dynamic>.from(trailer!.map((x) => x.toJson())),
+        "rent": rent == null
+            ? []
+            : List<dynamic>.from(rent!.map((x) => x.toJson())),
+        "free_zone": freeZone == null
+            ? []
+            : List<dynamic>.from(freeZone!.map((x) => x.toJson())),
         "advertise": advertise,
       };
 }
@@ -195,8 +247,12 @@ class Featured {
         excludePlan: json["exclude_plan"].toString(),
         createdAt: json["created_at"],
         updatedAt: json["updated_at"],
-        category: json["category"] == null ? null : Category.fromJson(json["category"]),
-        subCategory: json["sub_category"] == null ? null : Category.fromJson(json["sub_category"]),
+        category: json["category"] == null
+            ? null
+            : Category.fromJson(json["category"]),
+        subCategory: json["sub_category"] == null
+            ? null
+            : Category.fromJson(json["sub_category"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -402,12 +458,16 @@ class TelevisionData {
   });
 
   factory TelevisionData.fromJson(Map<String, dynamic> json) => TelevisionData(
-        data: json["data"] == null ? [] : List<Channel>.from(json["data"]!.map((x) => Channel.fromJson(x))),
+        data: json["data"] == null
+            ? []
+            : List<Channel>.from(json["data"]!.map((x) => Channel.fromJson(x))),
         nextPageUrl: json["next_page_url"],
       );
 
   Map<String, dynamic> toJson() => {
-        "data": data == null ? [] : List<dynamic>.from(data!.map((x) => x.toJson())),
+        "data": data == null
+            ? []
+            : List<dynamic>.from(data!.map((x) => x.toJson())),
         "next_page_url": nextPageUrl,
       };
 }

@@ -33,6 +33,8 @@ class Channel {
         updatedAt: json["updated_at"].toString(),
       );
 
+  get name => null;
+
   Map<String, dynamic> toJson() => {
         "id": id,
         "title": title,

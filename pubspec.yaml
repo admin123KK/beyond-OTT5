@@ -91,6 +91,7 @@ flutter:
     - assets/images/social/
     - assets/animation/
     - assets/
+    # - assets/mock_dashboard.json
 
   fonts:
     - family: Schyler

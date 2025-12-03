@@ -98,7 +98,8 @@ class HomeController extends GetxController {
     ResponseModel model = await homeRepo.dashboard();
 
     if (model.statusCode == 200) {
-      DashBoardResponseModel responseModel = DashBoardResponseModel.fromJson(jsonDecode(model.responseJson));
+      DashBoardResponseModel responseModel =
+          DashBoardResponseModel.fromJson(jsonDecode(model.responseJson));
       if (responseModel.data != null) {
         sliderImagePath = responseModel.data?.path?.landscape ?? '';
         televisionImagePath = responseModel.data?.path?.television ?? '';
@@ -123,7 +124,8 @@ class HomeController extends GetxController {
         eventList.clear();
 
         sliderList.addAll(responseModel.data?.data?.sliders ?? []);
-        televisionList.addAll(responseModel.data?.data?.televisions?.data ?? []);
+        televisionList
+            .addAll(responseModel.data?.data?.televisions?.data ?? []);
         featuredMovieList.addAll(responseModel.data?.data?.featured ?? []);
         recentlyAddedList.addAll(responseModel.data?.data?.recentlyAdded ?? []);
         latestSeriesList.addAll(responseModel.data?.data?.latestSeries ?? []);
@@ -147,8 +149,10 @@ class HomeController extends GetxController {
 
     ResponseModel response = await homeRepo.getPopUpAds();
     if (response.statusCode == 200) {
-      PopUpAdsModel popUpAdsModel = PopUpAdsModel.fromJson(jsonDecode(response.responseJson));
-      if (popUpAdsModel.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
+      PopUpAdsModel popUpAdsModel =
+          PopUpAdsModel.fromJson(jsonDecode(response.responseJson));
+      if (popUpAdsModel.status?.toLowerCase() ==
+          MyStrings.success.toLowerCase()) {
         String image = popUpAdsModel.data?.advertise?.content?.image ?? '';
         String imagePath = popUpAdsModel.data?.imagePath ?? '';
         if (image.isNotEmpty) {
@@ -160,7 +164,8 @@ class HomeController extends GetxController {
             useDots: false,
             images: [popAdsUrl],
             onClick: (index) async {
-              await launchUrl(Uri.parse(popAdsClickUrl), mode: LaunchMode.platformDefault);
+              await launchUrl(Uri.parse(popAdsClickUrl),
+                  mode: LaunchMode.platformDefault);
             },
           ).show();
         }
@@ -176,7 +181,9 @@ class HomeController extends GetxController {
     ResponseModel responseModel = await homeRepo.getSubcriptionData();
 
     if (responseModel.statusCode == 200) {
-      UserSubcriptionResponseModel model = UserSubcriptionResponseModel.fromJson(jsonDecode(responseModel.responseJson));
+      UserSubcriptionResponseModel model =
+          UserSubcriptionResponseModel.fromJson(
+              jsonDecode(responseModel.responseJson));
       if (model.status == 'success') {
         subcribeChannelList.addAll(model.data?.subscribedChannelId ?? []);
         subcribeEventList.addAll(model.data?.subscribedTournamentId ?? []);
@@ -195,18 +202,32 @@ class HomeController extends GetxController {
     isSubcribeLoading = telivision.id.toString();
     update();
     try {
-      ResponseModel response = await homeRepo.subcribeChannel(telivision.id.toString());
+      ResponseModel response =
+          await homeRepo.subcribeChannel(telivision.id.toString());
       if (response.statusCode == 200) {
-        BuySubscribePlanResponseModel model = BuySubscribePlanResponseModel.fromJson(jsonDecode(response.responseJson));
+        BuySubscribePlanResponseModel model =
+            BuySubscribePlanResponseModel.fromJson(
+                jsonDecode(response.responseJson));
         if (model.status == 'success') {
           String subId = model.data?.subscriptionId ?? '';
           update();
-          Get.toNamed(RouteHelper.depositScreen, arguments: [telivision.price.toString(), telivision.name.toString(), subId, telivision.id.toString()]);
+          Get.toNamed(RouteHelper.depositScreen, arguments: [
+            telivision.price.toString(),
+            telivision.name.toString(),
+            subId,
+            telivision.id.toString()
+          ]);
         } else {
-          CustomSnackbar.showCustomSnackbar(errorList: [model.message?.error.toString() ?? MyStrings.failedToBuySubscriptionPlan], msg: [''], isError: true);
+          CustomSnackbar.showCustomSnackbar(errorList: [
+            model.message?.error.toString() ??
+                MyStrings.failedToBuySubscriptionPlan
+          ], msg: [
+            ''
+          ], isError: true);
         }
       } else {
-        CustomSnackbar.showCustomSnackbar(errorList: [response.message], msg: [], isError: true);
+        CustomSnackbar.showCustomSnackbar(
+            errorList: [response.message], msg: [], isError: true);
       }
     } catch (e) {
       printx(e.toString());
@@ -216,7 +237,8 @@ class HomeController extends GetxController {
   }
 
   bool isAuthorized() {
-    String? value = homeRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey);
+    String? value = homeRepo.apiClient.sharedPreferences
+        .getString(SharedPreferenceHelper.accessTokenKey);
     return value == null
         ? false
         : value.isEmpty
