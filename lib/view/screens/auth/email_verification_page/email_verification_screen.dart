@@ -1,55 +1,150 @@
+// email_verification_screen.dart ← EXACT SAME NAME
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:play_lab/constants/api.dart';
+import 'package:play_lab/constants/my_strings.dart';
+import 'package:play_lab/core/route/route.dart';
+import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/core/utils/my_images.dart';
+import 'package:play_lab/core/utils/styles.dart';
+import 'package:play_lab/core/utils/util.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
+import 'package:play_lab/view/components/bg_widget/bg_image_widget.dart';
+import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/buttons/rounded_loading_button.dart';
-
-import '../../../../constants/my_strings.dart';
-import '../../../../core/utils/my_color.dart';
-import '../../../../core/utils/my_images.dart';
-import '../../../../core/utils/styles.dart';
-import '../../../../core/utils/util.dart';
-import '../../../../data/controller/auth/auth/email_verification_controller.dart';
-import '../../../../data/repo/auth/sms_email_verification_repo.dart';
-import '../../../../data/services/api_service.dart';
-import '../../../components/bg_widget/bg_image_widget.dart';
-import '../../../components/buttons/rounded_button.dart';
-import '../../../components/otp_field_widget/otp_field_widget.dart';
+import 'package:play_lab/view/components/otp_field_widget/otp_field_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  String? _email;
+  String _otpCode = '';
+  bool _isLoading = false;
+  bool _isResendLoading = false;
+  String? _errorMessage;
+
   @override
   void initState() {
-    MyUtil.changeTheme();
-    Get.put(ApiClient(sharedPreferences: Get.find()));
-    Get.put(SmsEmailVerificationRepo(apiClient: Get.find()));
-    Get.put(EmailVerificationController(repo: Get.find(), sharedPreferences: Get.find()));
-
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
-
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      //  controller.loadData();
+    MyUtil.changeTheme();
+    SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
+    _loadSavedEmail();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _email = prefs.getString('forget_pass_email') ?? '';
     });
   }
 
-  @override
-  void dispose() {
-    Get.find<EmailVerificationController>().clearData();
-    super.dispose();
+  // Verify the code + SAVE IT for next screen
+  Future<void> _verifyCode() async {
+    if (_otpCode.length != 6) {
+      setState(() => _errorMessage = "Please enter 6-digit code");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.verifyCodeEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: jsonEncode({
+          "code": _otpCode,
+          "email": _email,
+        }),
+      );
+
+      final jsonResponse = json.decode(response.body);
+
+      if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
+        // SAVE THE OTP CODE FOR RESET PASSWORD SCREEN
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            'verified_otp_code', _otpCode); // ← THIS IS CRITICAL
+
+        Get.snackbar(
+          "Verified!",
+          "Code verified successfully",
+          backgroundColor: MyColor.primaryColor,
+          colorText: Colors.white,
+        );
+
+        Get.offAndToNamed(RouteHelper.resetPasswordScreen);
+      } else {
+        final error =
+            jsonResponse['message']?['error']?[0] ?? "Invalid or expired code";
+        setState(() => _errorMessage = error);
+      }
+    } catch (e) {
+      setState(() => _errorMessage = "Network error. Please try again.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Resend Code
+  Future<void> _resendCode() async {
+    if (_email == null || _email!.isEmpty) {
+      Get.snackbar("Error", "Email not found!");
+      return;
+    }
+
+    setState(() => _isResendLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.forgotPasswordEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: jsonEncode({
+          "type": "email",
+          "value": _email,
+        }),
+      );
+
+      final jsonResponse = json.decode(response.body);
+
+      if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
+        Get.snackbar("Sent!", "New code sent to $_email",
+            backgroundColor: MyColor.primaryColor, colorText: Colors.white);
+      } else {
+        Get.snackbar("Failed", "Could not resend code");
+      }
+    } catch (e) {
+      Get.snackbar("Error", "No internet");
+    } finally {
+      if (mounted) setState(() => _isResendLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const MyBgWidget(),
+        const MyBgWidget(image: MyImages.onboardingBG),
         PopScope(
           canPop: false,
           child: Scaffold(
@@ -61,82 +156,71 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               textColor: MyColor.colorWhite,
               bgColor: Colors.transparent,
             ),
-            body: GetBuilder<EmailVerificationController>(
-              builder: (controller) => controller.dataLoading
-                  ? const SizedBox(
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : SingleChildScrollView(
-                      child: Column(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.06),
+                  Center(
+                      child: Image.asset(MyImages.emailVerifyImage,
+                          height: 100, width: 100)),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.06),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: mulishRegular.copyWith(color: MyColor.textColor),
                         children: [
-                          SizedBox(height: MediaQuery.of(context).size.height * .06),
-                          Center(
-                            child: Image.asset(
-                              MyImages.emailVerifyImage,
-                              height: 100,
-                              width: 100,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          SizedBox(height: MediaQuery.of(context).size.height * .06),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * .07),
-                            child: Text(MyStrings.viaEmailVerify.tr, maxLines: 3, textAlign: TextAlign.center, style: mulishRegular.copyWith(color: MyColor.textColor)),
-                          ),
-                          const SizedBox(height: 30),
-                          OTPFieldWidget(
-                            onChanged: (value) {
-                              controller.currentText = value;
-                            },
-                          ),
-                          SizedBox(height: MediaQuery.of(context).size.height * .03),
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 15),
-                            child: controller.isLoading
-                                ? const RoundedLoadingButton()
-                                : RoundedButton(
-                                    text: MyStrings.verify.tr,
-                                    press: () {
-                                      if (controller.currentText.length != 6) {
-                                        controller.hasError = true;
-                                      } else {
-                                        controller.verifyEmail(controller.currentText);
-                                      }
-                                    }),
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * .04,
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                MyStrings.didNotReceiveCode.tr,
-                                style: mulishRegular,
-                              ),
-                              SizedBox(
-                                height: controller.resendLoading ? 5 : 2,
-                              ),
-                              GestureDetector(
-                                  onTap: () {
-                                    controller.sendCodeAgain();
-                                  },
-                                  child: controller.resendLoading
-                                      ? const SizedBox(
-                                          height: 15,
-                                          width: 15,
-                                          child: CircularProgressIndicator(
-                                            color: MyColor.primaryColor,
-                                          ))
-                                      : Text(MyStrings.resend.tr, style: mulishBold.copyWith(decoration: TextDecoration.underline, color: MyColor.colorWhite)))
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 14,
-                          ),
+                          const TextSpan(
+                              text: "We sent a verification code to\n"),
+                          TextSpan(
+                              text: _email ?? "your email",
+                              style: mulishBold.copyWith(
+                                  color: MyColor.primaryColor)),
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 40),
+                  OTPFieldWidget(
+                    onChanged: (value) {
+                      _otpCode = value;
+                      if (_errorMessage != null)
+                        setState(() => _errorMessage = null);
+                    },
+                  ),
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center),
+                    ),
+                  const SizedBox(height: 30),
+                  _isLoading
+                      ? const RoundedLoadingButton()
+                      : RoundedButton(
+                          text: MyStrings.verify.tr, press: _verifyCode),
+                  const SizedBox(height: 40),
+                  Text(MyStrings.didNotReceiveCode.tr,
+                      style: mulishRegular.copyWith(color: MyColor.textColor)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _isResendLoading ? null : _resendCode,
+                    child: _isResendLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(MyStrings.resend.tr,
+                            style: mulishBold.copyWith(
+                                color: MyColor.primaryColor,
+                                decoration: TextDecoration.underline)),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
