@@ -157,8 +157,8 @@ class NavigationDrawerWidget extends StatelessWidget {
                   onTap: () => Get.toNamed(RouteHelper.privacyScreen),
                 ),
                 _buildDrawerItem(
-                  icon: Icons.book,
-                  title: 'Testing Page',
+                  icon: Icons.privacy_tip_outlined,
+                  title: MyStrings.policies,
                   onTap: () => Get.toNamed(RouteHelper.testingScreen),
                 ),
               ],

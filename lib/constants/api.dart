@@ -21,4 +21,5 @@ class ApiConstants {
       "$baseUrl/api/section/recent";
   static const String deviceLatestEndpoint = "$baseUrl/api/section/latest";
   static const String deviceTrailerEndpoint = "$baseUrl/api/section/trailer";
+  static const String logoutEndpoint = "$baseUrl/api/logout";
 }

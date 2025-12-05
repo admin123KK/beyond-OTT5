@@ -1,25 +1,30 @@
-// testing_page.dart → FINAL & FULLY WORKING WITH YOUR REAL PURCHASE SCREEN
-
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
+import 'package:video_player/video_player.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   const MovieDetailsScreen({Key? key}) : super(key: key);
+
   @override
-  State<MovieDetailsScreen> createState() => _TestingPageState();
+  State<MovieDetailsScreen> createState() => _MovieDetailsScreenState();
 }
 
-class _TestingPageState extends State<MovieDetailsScreen> {
+class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool isLoading = true;
   Map<String, dynamic>? movie;
   String baseUrl = ApiConstants.baseUrl;
   String portraitPath = "";
   String landscapePath = "";
   bool showMore = false;
+
+  // Trailer variables
+  String trailerVideoUrl = "";
+  bool isTrailerLoading = true;
+  String trailerError = "";
 
   @override
   void initState() {
@@ -45,12 +50,71 @@ class _TestingPageState extends State<MovieDetailsScreen> {
             landscapePath = json['data']['landscape_path'] ?? "";
             isLoading = false;
           });
+
+          // Extract trailer path and fetch real video
+          final trailerPath = json['data']['trailer']?['path'] ?? "";
+          if (trailerPath.isNotEmpty) {
+            fetchTrailerVideo(trailerPath);
+          } else {
+            setState(() {
+              trailerError = "No trailer available";
+              isTrailerLoading = false;
+            });
+          }
         } else {
           setState(() => isLoading = false);
         }
       }
     } catch (e) {
       setState(() => isLoading = false);
+    }
+  }
+
+  // Fetch real trailer video from the "path"
+  Future<void> fetchTrailerVideo(String pathUrl) async {
+    setState(() {
+      isTrailerLoading = true;
+      trailerError = "";
+    });
+
+    try {
+      final response = await http.get(Uri.parse(pathUrl));
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final List trailers = json['data'] ?? [];
+
+        if (trailers.isNotEmpty) {
+          final videoPath = trailers[0]['video'] ?? "";
+          if (videoPath.isNotEmpty) {
+            setState(() {
+              trailerVideoUrl = videoPath.startsWith('http')
+                  ? videoPath
+                  : "$baseUrl/$videoPath".replaceAll('//', '/');
+              isTrailerLoading = false;
+            });
+          } else {
+            setState(() {
+              trailerError = "Trailer video not found";
+              isTrailerLoading = false;
+            });
+          }
+        } else {
+          setState(() {
+            trailerError = "No trailer found";
+            isTrailerLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          trailerError = "Failed to load trailer";
+          isTrailerLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        trailerError = "Check internet connection";
+        isTrailerLoading = false;
+      });
     }
   }
 
@@ -91,14 +155,13 @@ class _TestingPageState extends State<MovieDetailsScreen> {
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          // HERO POSTER
           SliverAppBar(
             expandedHeight: MediaQuery.of(context).size.height * 0.58,
             pinned: true,
             backgroundColor: Colors.black,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Get.back(),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -120,14 +183,12 @@ class _TestingPageState extends State<MovieDetailsScreen> {
               ),
             ),
           ),
-
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // TITLE
                   Text(title,
                       style: const TextStyle(
                           fontSize: 38,
@@ -135,7 +196,6 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                           color: Colors.white)),
                   const SizedBox(height: 12),
 
-                  // NEW RELEASE BADGE
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -148,13 +208,11 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // GENRE LINE
                   Text("Released in 2025 • $genre",
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 16)),
                   const SizedBox(height: 16),
 
-                  // SHORT DESCRIPTION
                   Text(
                     preview.isNotEmpty ? preview : desc,
                     style: const TextStyle(
@@ -164,7 +222,6 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // VIEW MORE
                   GestureDetector(
                     onTap: () => setState(() => showMore = !showMore),
                     child: Row(
@@ -183,7 +240,6 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                     ),
                   ),
 
-                  // FULL DESC + CAST WHEN EXPANDED
                   if (showMore) ...[
                     const SizedBox(height: 24),
                     Text(desc,
@@ -213,19 +269,15 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                   ],
                   const SizedBox(height: 40),
 
-                  // PINK BUY NOW BUTTON → GOES TO YOUR REAL PURCHASE SCREEN WITH CORRECT DATA
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.toNamed(
-                          '/moviepurchase-screen', // or whatever your route name is
-                          arguments: {
-                            'title': title,
-                            'coverImage': poster,
-                            'price': double.tryParse(rentPrice) ?? 325.0,
-                          },
-                        );
+                        Get.toNamed('/moviepurchase-screen', arguments: {
+                          'title': title,
+                          'coverImage': poster,
+                          'price': double.tryParse(rentPrice) ?? 325.0,
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pink,
@@ -244,27 +296,22 @@ class _TestingPageState extends State<MovieDetailsScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // TRAILER
                   const Text("Movie Official Trailer",
                       style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
                   const SizedBox(height: 16),
+
+                  // REAL TRAILER VIDEO PLAYER
                   Container(
                     height: 220,
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         color: Colors.grey[900]),
-                    child: Stack(
-                      children: [
-                        Center(
-                            child: Image.network(poster,
-                                fit: BoxFit.cover, width: double.infinity)),
-                        const Center(
-                            child: Icon(Icons.play_circle_fill,
-                                size: 80, color: Colors.white70)),
-                      ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: _buildTrailerWidget(),
                     ),
                   ),
                   const SizedBox(height: 80),
@@ -274,6 +321,54 @@ class _TestingPageState extends State<MovieDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTrailerWidget() {
+    if (isTrailerLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.pink),
+      );
+    }
+
+    if (trailerError.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 50),
+            const SizedBox(height: 10),
+            Text(trailerError, style: const TextStyle(color: Colors.white70)),
+          ],
+        ),
+      );
+    }
+
+    if (trailerVideoUrl.isNotEmpty) {
+      return Stack(
+        children: [
+          Image.network(poster, fit: BoxFit.cover, width: double.infinity),
+          const Center(
+            child:
+                Icon(Icons.play_circle_fill, size: 80, color: Colors.white70),
+          ),
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Get.to(() => FullScreenTrailer(url: trailerVideoUrl));
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return const Center(
+      child: Text("No trailer availableee",
+          style: TextStyle(color: Colors.white70)),
     );
   }
 
@@ -291,6 +386,63 @@ class _TestingPageState extends State<MovieDetailsScreen> {
             TextSpan(text: value),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Fullscreen trailer page
+class FullScreenTrailer extends StatefulWidget {
+  final String url;
+  const FullScreenTrailer({Key? key, required this.url}) : super(key: key);
+
+  @override
+  State<FullScreenTrailer> createState() => _FullScreenTrailerState();
+}
+
+class _FullScreenTrailerState extends State<FullScreenTrailer> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.url);
+    _controller.initialize().then((_) {
+      setState(() {});
+      _controller.play();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : const CircularProgressIndicator(color: Colors.pink),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.pink,
+        child:
+            Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+        onPressed: () {
+          setState(() {
+            _controller.value.isPlaying
+                ? _controller.pause()
+                : _controller.play();
+          });
+        },
       ),
     );
   }
