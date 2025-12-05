@@ -7,13 +7,13 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 
-class MovieDetailsScreen extends StatefulWidget {
-  const MovieDetailsScreen({Key? key}) : super(key: key);
+class TestingPage extends StatefulWidget {
+  const TestingPage({Key? key}) : super(key: key);
   @override
-  State<MovieDetailsScreen> createState() => _TestingPageState();
+  State<TestingPage> createState() => _TestingPageState();
 }
 
-class _TestingPageState extends State<MovieDetailsScreen> {
+class _TestingPageState extends State<TestingPage> {
   bool isLoading = true;
   Map<String, dynamic>? movie;
   String baseUrl = ApiConstants.baseUrl;

@@ -36,200 +36,204 @@ class _MoviePurchaseScreenState extends State<MoviePurchaseScreen> {
         title: Text("Movie Purchase",
             style: mulishSemiBold.copyWith(color: Colors.white)),
       ),
-      body: Column(
-        children: [
-          // Movie Info Card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E2A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: MyColor.primaryColor.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    movieImage,
-                    width: 90,
-                    height: 130,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 90,
-                      height: 130,
-                      color: Colors.grey[800],
-                      child: const Icon(Icons.movie,
-                          size: 40, color: Colors.white54),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(movieTitle,
-                          style: mulishBold.copyWith(
-                              fontSize: 19, color: Colors.white),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 10),
-                      Text("Duration (Valid After Purchase)",
-                          style: mulishRegular.copyWith(
-                              color: Colors.white60, fontSize: 13)),
-                      Text("24 hour",
-                          style: mulishSemiBold.copyWith(
-                              color: MyColor.primaryColor, fontSize: 15)),
-                      const SizedBox(height: 10),
-                      Text("Total Price",
-                          style: mulishRegular.copyWith(
-                              color: Colors.white60, fontSize: 13)),
-                      Text("NRS. ${moviePrice.toInt()}",
-                          style: mulishBold.copyWith(
-                              color: Colors.white, fontSize: 18)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Wallet Balance
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.account_balance_wallet_outlined,
-                        color: Colors.white70, size: 22),
-                    const SizedBox(width: 8),
-                    Text("E-Wallet Balance",
-                        style: mulishRegular.copyWith(color: Colors.white70)),
-                  ],
-                ),
-                Text("NRS. ${walletBalance.toStringAsFixed(1)}/-",
-                    style: mulishBold.copyWith(
-                        color: MyColor.primaryColor, fontSize: 18)),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Payment Method Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text("Payment method",
-                  style: mulishSemiBold.copyWith(
-                      color: Colors.white, fontSize: 16)),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // PlayLab Wallet
-          _buildPaymentOption(
-            title: "PlayLab Wallet",
-            isSelected: selectedPaymentMethod == 0,
-            onTap: () => setState(() => selectedPaymentMethod = 0),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Payment Gateways
-          _buildPaymentOption(
-            title: "Payment Gateways",
-            isSelected: selectedPaymentMethod == 1,
-            onTap: () => setState(() => selectedPaymentMethod = 1),
-          ),
-
-          // PPV Disclaimer - BELOW PAYMENT GATEWAYS (as you asked)
-          Padding(
-            padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
+      body: SingleChildScrollView(
+        // This fixes overflow on small devices
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          children: [
+            // Movie Info Card
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2D1B1B),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF1E1E2A),
+                borderRadius: BorderRadius.circular(16),
                 border:
-                    Border.all(color: Colors.orange.shade700.withOpacity(0.6)),
+                    Border.all(color: MyColor.primaryColor.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange.shade400, size: 26),
-                  const SizedBox(width: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      movieImage,
+                      width: 90,
+                      height: 130,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 90,
+                        height: 130,
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.movie,
+                            size: 40, color: Colors.white54),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("PPV DISCLAIMER",
+                        Text(movieTitle,
                             style: mulishBold.copyWith(
-                                color: Colors.orange.shade400, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text("Once purchased, money will not be refunded.",
+                                fontSize: 19, color: Colors.white),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 10),
+                        Text("Duration (Valid After Purchase)",
                             style: mulishRegular.copyWith(
-                                color: Colors.white70, fontSize: 12)),
+                                color: Colors.white60, fontSize: 13)),
+                        Text("24 hour",
+                            style: mulishSemiBold.copyWith(
+                                color: MyColor.primaryColor, fontSize: 15)),
+                        const SizedBox(height: 10),
+                        Text("Total Price",
+                            style: mulishRegular.copyWith(
+                                color: Colors.white60, fontSize: 13)),
+                        Text("NRS. ${moviePrice.toInt()}",
+                            style: mulishBold.copyWith(
+                                color: Colors.white, fontSize: 18)),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          const Spacer(),
+            const SizedBox(height: 20),
 
-          // Bottom Buttons
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Color(0xFF111118),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                RoundedButton(
-                  text: "Continue to Payment",
-                  press: () => _handleContinuePayment(movieTitle, moviePrice),
-                  color: MyColor.primaryColor,
-                  textColor: Colors.white,
-                  // padding: const EdgeInsets.symmetric(vertical: 18),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () => Get.back(),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+            // Wallet Balance
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.account_balance_wallet_outlined,
+                          color: Colors.white70, size: 22),
+                      const SizedBox(width: 8),
+                      Text("E-Wallet Balance",
+                          style: mulishRegular.copyWith(color: Colors.white70)),
+                    ],
                   ),
-                  child: Center(
-                    child: Text("Cancel",
-                        style: mulishSemiBold.copyWith(
-                            color: Colors.white70, fontSize: 16)),
-                  ),
-                ),
-              ],
+                  Text("NRS. ${walletBalance.toStringAsFixed(1)}/-",
+                      style: mulishBold.copyWith(
+                          color: MyColor.primaryColor, fontSize: 18)),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 20),
+
+            // Payment Method Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Payment method",
+                    style: mulishSemiBold.copyWith(
+                        color: Colors.white, fontSize: 16)),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // PlayLab Wallet
+            _buildPaymentOption(
+              title: "PlayLab Wallet",
+              isSelected: selectedPaymentMethod == 0,
+              onTap: () => setState(() => selectedPaymentMethod = 0),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Payment Gateways
+            _buildPaymentOption(
+              title: "Payment Gateways",
+              isSelected: selectedPaymentMethod == 1,
+              onTap: () => setState(() => selectedPaymentMethod = 1),
+            ),
+
+            // PPV Disclaimer
+            Padding(
+              padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D1B1B),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: Colors.orange.shade700.withOpacity(0.6)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange.shade400, size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("PPV DISCLAIMER",
+                              style: mulishBold.copyWith(
+                                  color: Colors.orange.shade400, fontSize: 13)),
+                          const SizedBox(height: 4),
+                          Text("Once purchased, money will not be refunded.",
+                              style: mulishRegular.copyWith(
+                                  color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30), // Space before bottom buttons
+
+            // Bottom Buttons (Fixed position but scrollable)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFF111118),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  RoundedButton(
+                    text: "Continue to Payment",
+                    press: () => _handleContinuePayment(movieTitle, moviePrice),
+                    color: MyColor.primaryColor,
+                    textColor: Colors.white,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Center(
+                      child: Text("Cancel",
+                          style: mulishSemiBold.copyWith(
+                              color: Colors.white70, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _handleContinuePayment(String title, double price) {
     if (selectedPaymentMethod == 0) {
-      // PlayLab Wallet Selected
       if (walletBalance >= price) {
         _showSuccessDialog(title, price);
       } else {
@@ -252,9 +256,8 @@ class _MoviePurchaseScreenState extends State<MoviePurchaseScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Get.back(); // Close dialog
-                  Get.toNamed(RouteHelper
-                      .walletTopUpScreen); // Real Wallet Top-Up Screen
+                  Get.back();
+                  Get.toNamed(RouteHelper.walletTopUpScreen);
                 },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: MyColor.primaryColor),
@@ -265,7 +268,6 @@ class _MoviePurchaseScreenState extends State<MoviePurchaseScreen> {
         );
       }
     } else {
-      // Payment Gateways Selected → Go to real PaymentMethodScreen
       Get.toNamed(RouteHelper.paymentMethodScreen);
     }
   }
@@ -310,7 +312,7 @@ class _MoviePurchaseScreenState extends State<MoviePurchaseScreen> {
                 text: "Done",
                 press: () {
                   Get.back();
-                  Get.back(); // Back to movie details or home
+                  Get.back();
                 },
                 color: MyColor.primaryColor,
                 textColor: Colors.white,

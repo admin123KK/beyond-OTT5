@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:play_lab/view/components/nav_drawer/testing_page.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/active_session.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/setting_screen.dart';
 import 'package:play_lab/view/screens/bottom_nav_pages/all_movies/movie_purchase.dart';
@@ -106,8 +107,8 @@ class RouteHelper {
   static const String watchPartyHistoryScreen = '/watch-party-history-screen';
   static const String joinPartyScreen = '/join-party-screen';
   static const String rentItemScreen = '/rent-item-screen';
-  static const String watchMovie = '/watchmovie-scren';
-  static const String moviePurchase = '/moviepurchase-scren';
+  static const String watchMovie = '/watchmovie-screen';
+  static const String moviePurchase = '/moviepurchase-screen';
   static const String settingScreen = '/setting-screen';
   static const String activeDevice = '/activeDevice-screen';
 
@@ -115,6 +116,7 @@ class RouteHelper {
   static const String allTicketScreen = '/all_ticket_screen';
   static const String ticketDetailsdScreen = '/ticket_details_screen';
   static const String newTicketScreen = '/new_ticket_screen';
+  static const String testingScreen = '/testing_screen';
 
   static const String faqScreen = '/faq-screen';
   static const String languageScreen = '/language-screen';
@@ -170,11 +172,8 @@ class RouteHelper {
     GetPage(name: resetPasswordScreen, page: () => const ResetPasswordScreen()),
 
     GetPage(name: homeScreen, page: () => const HomeScreen()),
-    GetPage(
-        name: movieDetailsScreen,
-        page: () => MovieDetailsScreen(
-              slug: '',
-            )),
+    GetPage(name: movieDetailsScreen, page: () => MovieDetailsScreen()),
+    GetPage(name: testingScreen, page: () => TestingPage()),
     GetPage(
         name: searchScreen,
         page: () => SearchScreen(searchText: Get.arguments)),

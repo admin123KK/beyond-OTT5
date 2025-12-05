@@ -1,9 +1,4 @@
-// To parse this JSON data, do
-//
-//     final projectPlanResponseModel = projectPlanResponseModelFromJson(jsonString);
-
 import 'dart:convert';
-
 import 'package:play_lab/data/model/global/common_api_response_model.dart';
 import 'package:play_lab/data/model/global/telivision/channel.dart';
 import 'package:play_lab/data/model/global/tournament/tournament_model.dart';
