@@ -13,6 +13,7 @@ import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/bottom_Nav/bottom_nav.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
 import 'package:play_lab/view/screens/my_search/search_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ← ADDED
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,6 +63,30 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     fetchDashboard();
+  }
+
+  // ← NEW: Check login + navigate safely
+  void _navigateWithAuthCheck(String route, {dynamic arguments}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ??
+        prefs.getString('token') ??
+        prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      Get.toNamed(RouteHelper.loginScreen);
+      Get.snackbar(
+        "Login Required",
+        "Please login to access this content",
+        backgroundColor: Colors.red.withOpacity(0.95),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 3),
+      );
+    } else {
+      Get.toNamed(route, arguments: arguments);
+    }
   }
 
   Future<void> fetchDashboard() async {
@@ -341,8 +366,8 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildFeaturedItem(
           String img, String title, String year, String slug) =>
       InkWell(
-        onTap: () =>
-            Get.toNamed(RouteHelper.movieDetailsScreen, arguments: slug),
+        onTap: () => _navigateWithAuthCheck(RouteHelper.movieDetailsScreen,
+            arguments: slug),
         child: Container(
           decoration: BoxDecoration(
               image:
@@ -371,7 +396,8 @@ class _HomeScreenState extends State<HomeScreen>
                         const TextStyle(color: Colors.white70, fontSize: 16)),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => Get.toNamed(RouteHelper.movieDetailsScreen,
+                  onPressed: () => _navigateWithAuthCheck(
+                      RouteHelper.movieDetailsScreen,
                       arguments: slug),
                   icon: const Icon(Icons.play_arrow, size: 28),
                   label:
@@ -389,6 +415,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
 
+  // ← Updated: Protected "See All"
   Widget _buildSectionTitle(String title, String route) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
         child: Row(
@@ -397,10 +424,11 @@ class _HomeScreenState extends State<HomeScreen>
             Text(title,
                 style: mulishBold.copyWith(color: Colors.white, fontSize: 19)),
             GestureDetector(
-                onTap: () => Get.toNamed(route),
-                child: Text("See All >",
-                    style: mulishSemiBold.copyWith(
-                        color: MyColor.primaryColor, fontSize: 14))),
+              onTap: () => _navigateWithAuthCheck(route),
+              child: Text("See All >",
+                  style: mulishSemiBold.copyWith(
+                      color: MyColor.primaryColor, fontSize: 14)),
+            ),
           ],
         ),
       );
@@ -414,43 +442,43 @@ class _HomeScreenState extends State<HomeScreen>
       child: _buildHorizontalList(freeZone,
           badge: "FREE", badgeColor: Colors.green));
 
+  // ← Updated: All items now protected
   Widget _buildHorizontalList(List<dynamic> items,
-          {bool isLive = false, String? badge, Color? badgeColor}) =>
-      ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 15),
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        itemBuilder: (context, i) {
-          final item = items[i];
-          final imgPath = isLive
-              ? item['image']
-              : (item['image']?['portrait'] ??
-                  item['image']?['landscape'] ??
-                  '');
-          final imgUrl = imgPath == null || imgPath.toString().isEmpty
-              ? "https://via.placeholder.com/300"
-              : imgPath.toString().startsWith('http')
-                  ? imgPath.toString()
-                  : isLive
-                      ? "https://ott.beyondtechnepal.com/$tvBaseUrl$imgPath"
-                      : "$portraitBaseUrl$imgPath";
+      {bool isLive = false, String? badge, Color? badgeColor}) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      scrollDirection: Axis.horizontal,
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final item = items[i];
+        final imgPath = isLive
+            ? item['image']
+            : (item['image']?['portrait'] ?? item['image']?['landscape'] ?? '');
+        final imgUrl = imgPath == null || imgPath.toString().isEmpty
+            ? "https://via.placeholder.com/300"
+            : imgPath.toString().startsWith('http')
+                ? imgPath.toString()
+                : isLive
+                    ? "https://ott.beyondtechnepal.com/$tvBaseUrl$imgPath"
+                    : "$portraitBaseUrl$imgPath";
 
-          return _buildPoster(
-            imageUrl: imgUrl,
-            title: item['title'] ?? "Unknown",
-            onTap: () {
-              final route = isLive
-                  ? RouteHelper.allLiveTVScreen
-                  : RouteHelper.movieDetailsScreen;
-              final arg = isLive ? item['id'] : item['slug'];
-              Get.toNamed(route, arguments: arg);
-            },
-            isLive: isLive,
-            badgeText: badge,
-            badgeColor: badgeColor,
-          );
-        },
-      );
+        return _buildPoster(
+          imageUrl: imgUrl,
+          title: item['title'] ?? "Unknown",
+          onTap: () {
+            final route = isLive
+                ? RouteHelper.allLiveTVScreen // or your Live TV detail route
+                : RouteHelper.movieDetailsScreen;
+            final arg = isLive ? item['id'] : item['slug'];
+            _navigateWithAuthCheck(route, arguments: arg);
+          },
+          isLive: isLive,
+          badgeText: badge,
+          badgeColor: badgeColor,
+        );
+      },
+    );
+  }
 
   Widget _buildPoster({
     required String imageUrl,
