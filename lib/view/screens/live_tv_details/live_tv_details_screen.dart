@@ -1,16 +1,12 @@
 // live_tv_details_screen.dart
+import 'dart:convert';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:play_lab/core/utils/my_color.dart';
-import 'package:play_lab/view/components/text/header_view_text.dart';
-import 'package:play_lab/view/screens/live_tv_details/widget/related_item_list.dart';
 import 'package:video_player/video_player.dart';
-
-import '../../../constants/my_strings.dart';
-import '../../components/custom_sized_box.dart';
-import '../movie_details/widget/body_widget/team_row.dart';
-import '../movie_details/widget/details_text_widget/details_text.dart';
 
 class LiveTvDetailsScreen extends StatefulWidget {
   const LiveTvDetailsScreen({super.key});
@@ -23,37 +19,96 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
   ChewieController? _chewieController;
   VideoPlayerController? _videoPlayerController;
 
-  // REAL HBO-STYLE PREMIUM TRAILER (100% working, stunning quality)
-  final String hboTrailerUrl =
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
+  String title = "Loading...";
+  String description = "Fetching channel details...";
+  String streamUrl = "";
+  String posterUrl =
+      "https://image.tmdb.org/t/p/w1280/8cdWjvZQUExUUTzyp4t6EDMUB2u.jpg";
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    final int channelId = Get.arguments as int;
+    fetchChannelAndPlay(channelId);
   }
 
-  void _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.network(hboTrailerUrl);
+  Future<void> fetchChannelAndPlay(int id) async {
+    try {
+      final res = await http.get(
+        Uri.parse("https://ott.beyondtechnepal.com/api/live-television/all"),
+        headers: {'Accept': 'application/json'},
+      );
 
-    await _videoPlayerController!.initialize();
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController!,
-      autoPlay: true,
-      looping: true,
-      allowFullScreen: true,
-      allowMuting: false,
-      showControls: true,
-      aspectRatio: _videoPlayerController!.value.aspectRatio,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: MyColor.primaryColor,
-        handleColor: MyColor.primaryColor,
-        backgroundColor: Colors.grey.shade900,
-        bufferedColor: Colors.white24,
-      ),
-      placeholder: Container(color: Colors.black),
-    );
-    if (mounted) setState(() {});
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body);
+        final channel = (json['data']['televisions']['data'] as List)
+            .firstWhere((c) => c['id'] == id, orElse: () => null);
+
+        if (channel != null) {
+          setState(() {
+            title = channel['title'] ?? "Live Channel";
+            description = channel['description'] ?? "No description available.";
+            streamUrl = channel['url'] ?? "";
+            final img = channel['image'] ?? "";
+            posterUrl = img.isNotEmpty
+                ? "https://ott.beyondtechnepal.com/assets/images/television/$img"
+                : posterUrl;
+            isLoading = false;
+          });
+
+          if (streamUrl.isNotEmpty) {
+            _initializePlayer(streamUrl);
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        description = "Failed to load channel";
+      });
+    }
+  }
+
+  void _initializePlayer(String url) {
+    _videoPlayerController = VideoPlayerController.network(url);
+
+    _videoPlayerController!.initialize().then((_) {
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        looping: true,
+        allowFullScreen: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: MyColor.primaryColor,
+          handleColor: MyColor.primaryColor,
+          backgroundColor: Colors.grey.shade900,
+          bufferedColor: Colors.white24,
+        ),
+        // Custom Controls with +15 / -15 sec buttons
+        cupertinoProgressColors: ChewieProgressColors(
+          playedColor: MyColor.primaryColor,
+          handleColor: MyColor.primaryColor,
+          backgroundColor: Colors.grey,
+          bufferedColor: Colors.white30,
+        ),
+        // Modern way to add custom buttons
+      );
+
+      // Add custom overlay buttons on top of player
+      _chewieController!.addListener(() {
+        if (_chewieController!.isFullScreen) {
+          // You can add PiP or other logic here later
+        }
+      });
+
+      if (mounted) setState(() {});
+    }).catchError((e) {
+      setState(() {
+        isLoading = false;
+        description = "Stream failed to load";
+      });
+    });
   }
 
   @override
@@ -73,19 +128,17 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // PREMIUM TRAILER + HBO POSTER BACKGROUND
+                // Background + Player
                 Stack(
                   children: [
-                    // HBO Poster Background (Beautiful)
                     Container(
                       height: 300,
                       width: double.infinity,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         image: DecorationImage(
-                          image: NetworkImage(
-                            "https://image.tmdb.org/t/p/w1280/8cdWjvZQUExUUTzyp4t6EDMUB2u.jpg", // Dune: Part Two – HBO Max style
-                          ),
+                          image: NetworkImage(posterUrl),
                           fit: BoxFit.cover,
+                          alignment: Alignment.center,
                         ),
                       ),
                       child: Container(
@@ -95,14 +148,14 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.9),
+                              Colors.black.withOpacity(0.9)
                             ],
                           ),
                         ),
                       ),
                     ),
 
-                    // Trailer Player
+                    // Live Player Box
                     Positioned(
                       top: 50,
                       left: 20,
@@ -112,7 +165,7 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
-                            BoxShadow(
+                            const BoxShadow(
                                 color: Colors.black45,
                                 blurRadius: 20,
                                 spreadRadius: 5),
@@ -120,23 +173,33 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: _videoPlayerController != null &&
-                                  _videoPlayerController!.value.isInitialized
-                              ? Chewie(controller: _chewieController!)
-                              : Container(
+                          child: isLoading
+                              ? Container(
                                   color: Colors.black87,
                                   child: const Center(
                                     child: CircularProgressIndicator(
                                         color: MyColor.primaryColor),
                                   ),
-                                ),
+                                )
+                              : _chewieController != null
+                                  ? Chewie(controller: _chewieController!)
+                                  : Container(
+                                      color: Colors.black87,
+                                      child: const Center(
+                                        child: Text(
+                                          "Stream Not Available",
+                                          style: TextStyle(
+                                              color: Colors.red, fontSize: 16),
+                                        ),
+                                      ),
+                                    ),
                         ),
                       ),
                     ),
                   ],
                 ),
 
-                // HBO Max Branding
+                // Title + LIVE Badge
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -146,13 +209,13 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: MyColor.primaryColor,
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: const Text(
-                              "PREMIUM",
+                              "LIVE",
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -160,61 +223,49 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Text(
-                            "HBO Max Live",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 12),
+
+                      // Channel Description Label
+                      const Text(
+                        "Channel Description",
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
                       Text(
-                        "Exclusive Movies • Series • Trailers",
-                        style: TextStyle(color: Colors.white70, fontSize: 15),
+                        description,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 15, height: 1.5),
                       ),
                     ],
                   ),
                 ),
 
                 const Divider(height: 1, color: MyColor.bodyTextColor),
-                const CustomSizedBox(height: 20),
-
-                // Description
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TeamRow(
-                          firstText: MyStrings.channelDescription.tr,
-                          secondText: ''),
-                      const CustomSizedBox(height: 10),
-                      const ExpandedTextWidget(
-                        teamLine: 6,
-                        text:
-                            "Experience the best of Hollywood with HBO Max. Watch latest blockbuster trailers, exclusive series premieres, and behind-the-scenes content in stunning 4K quality. Your cinema at home.",
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-                HeaderViewText(
-                    header: MyStrings.recommended.tr, isShowMoreVisible: false),
-                const RelatedTvList(),
-                const SizedBox(height: 80),
+                const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // FIXED BACK BUTTON (100% WORKING)
+          // Back Button
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(left: 16, top: 16),
               child: GestureDetector(
-                onTap: () => Get.back(), // FIXED: Now works perfectly
+                onTap: () => Get.back(),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(

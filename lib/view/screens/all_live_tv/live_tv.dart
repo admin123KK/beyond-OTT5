@@ -1,12 +1,10 @@
 // all_live_tv_screen.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:play_lab/constants/my_strings.dart';
+import 'package:http/http.dart' as http;
 import 'package:play_lab/core/route/route.dart';
-import 'package:play_lab/core/utils/my_color.dart';
-import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
-import 'package:play_lab/view/components/buttons/category_button.dart';
 
 class AllLiveTvScreen extends StatefulWidget {
   const AllLiveTvScreen({super.key});
@@ -16,224 +14,187 @@ class AllLiveTvScreen extends StatefulWidget {
 }
 
 class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
-  // Fake Live TV Categories
-  final List<Map<String, dynamic>> tvCategories = [
-    {
-      'name': 'Premium Channels',
-      'price': '9.99',
-      'isSubscribed': true,
-      'channels': [
-        {
-          'title': 'HBO Live',
-          'image':
-              'https://image.tmdb.org/t/p/w500/2OMB0ynKlyI2OKdFzy91SlJ9dPq.jpg'
-        },
-        {
-          'title': 'Starz HD',
-          'image':
-              'https://image.tmdb.org/t/p/w500/8zXj8k5vL6wAwrwQ1yW5dX3f2gN.jpg'
-        },
-        {
-          'title': 'Showtime',
-          'image':
-              'https://image.tmdb.org/t/p/w500/7r3DkknR5x9vF9nS8S3t3y2l.jpg'
-        },
-        {
-          'title': 'Cinemax',
-          'image':
-              'https://image.tmdb.org/t/p/w500/5n2e7k7vR8s9t0u1v2w3x4y5z.jpg'
-        },
-      ]
-    },
-    {
-      'name': 'Sports Pack',
-      'price': '14.99',
-      'isSubscribed': false,
-      'channels': [
-        {
-          'title': 'ESPN Live',
-          'image': 'https://image.tmdb.org/t/p/w500/3k3nW1p0v3x5y6z7a8b9c0d.jpg'
-        },
-        {
-          'title': 'Sky Sports',
-          'image': 'https://image.tmdb.org/t/p/w500/4m5n6o7p8q9r0s1t2u3v4w.jpg'
-        },
-        {
-          'title': 'BeIN Sports',
-          'image': 'https://image.tmdb.org/t/p/w500/5o6p7q8r9s0t1u2v3w4x5y.jpg'
-        },
-      ]
-    },
-    {
-      'name': 'Kids Zone',
-      'price': '4.99',
-      'isSubscribed': true,
-      'channels': [
-        {
-          'title': 'Cartoon Network',
-          'image': 'https://image.tmdb.org/t/p/w500/6p7q8r9s0t1u2v3w4x5y6z.jpg'
-        },
-        {
-          'title': 'Disney Channel',
-          'image': 'https://image.tmdb.org/t/p/w500/7q8r9s0t1u2v3w4x5y6z7a.jpg'
-        },
-        {
-          'title': 'Nickelodeon',
-          'image': 'https://image.tmdb.org/t/p/w500/8r9s0t1u2v3w4x5y6z7a8b.jpg'
-        },
-      ]
-    },
-  ];
+  List<dynamic> channels = [];
+  bool isLoading = true;
+
+  // CHANGE THIS: Set which channels are subscribed (by ID)
+  final List<int> subscribedChannelIds = [
+    1,
+    2
+  ]; // Kantipur & Test are subscribed
+
+  @override
+  void initState() {
+    super.initState();
+    fetchChannels();
+  }
+
+  Future<void> fetchChannels() async {
+    try {
+      final res = await http.get(
+        Uri.parse("https://ott.beyondtechnepal.com/api/live-television"),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body);
+        setState(() {
+          channels = json['data']['televisions']['data'];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MyColor.colorBlack,
-      appBar: const CustomAppBar(
-        title: MyStrings.allTV,
-        bgColor: MyColor.colorBlack,
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Get.back(),
+        ),
+        title: const Text("All Live TV", style: TextStyle(color: Colors.white)),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(15),
-        itemCount: tvCategories.length,
-        itemBuilder: (context, index) {
-          final category = tvCategories[index];
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 25),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: MyColor.colorBlack2,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: MyColor.borderColor, width: 1),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.purple))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Premium Channels Pack
+                  _buildPack(
+                    title: "Premium Channels",
+                    channels: channels,
+                    isPremium: true,
+                  ),
+                  const SizedBox(height: 30),
+                  // Sports Pack (example)
+                  _buildPack(
+                    title: "Sports Pack Channels",
+                    channels: channels,
+                    isPremium: false,
+                  ),
+                  const SizedBox(height: 100),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "${category['name']} Channels",
-                      style: mulishBold.copyWith(
-                          color: Colors.white, fontSize: 18),
-                    ),
-                    if (!category['isSubscribed'])
-                      CategoryButton(
-                        text: "Subscribe Now",
-                        press: () {
-                          Get.dialog(
-                            AlertDialog(
-                              backgroundColor: MyColor.colorBlack2,
-                              title: Text("Subscribe to ${category['name']}",
-                                  style: const TextStyle(color: Colors.white)),
-                              content: Text(
-                                "Monthly Price: \$${category['price']}\n\nGet access to all premium live channels instantly!",
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Get.back(),
-                                  child: const Text("Cancel",
-                                      style: TextStyle(color: Colors.grey)),
-                                ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: MyColor.primaryColor),
-                                  onPressed: () {
-                                    Get.back();
-                                    Get.snackbar("Success",
-                                        "Subscribed to ${category['name']}!",
-                                        backgroundColor: MyColor.primaryColor);
-                                  },
-                                  child: const Text("Subscribe"),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: MyColor.primaryColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "Subscribed",
-                          style: mulishSemiBold.copyWith(
-                              color: MyColor.primaryColor, fontSize: 12),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+    );
+  }
 
-                // Live TV Grid
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  children: List.generate(category['channels'].length, (i) {
-                    final channel = category['channels'][i];
-                    return GestureDetector(
-                      onTap: () {
-                        if (category['isSubscribed']) {
-                          Get.toNamed(RouteHelper.liveTvDetailsScreen);
-                        } else {
-                          Get.snackbar("Locked",
-                              "Please subscribe to watch this channel",
-                              backgroundColor: Colors.red);
-                        }
-                      },
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: MyColor.colorBlack,
-                          border: Border.all(color: MyColor.borderColor),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                channel['image'],
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: Colors.grey[800],
-                                  child: const Icon(Icons.live_tv,
-                                      color: Colors.white70, size: 30),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              channel['title'],
-                              style: mulishSemiBold.copyWith(
-                                  color: Colors.white, fontSize: 10),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
+  Widget _buildPack(
+      {required String title,
+      required List<dynamic> channels,
+      required bool isPremium}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade800),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isPremium ? Colors.purple.shade700 : Colors.pink,
+                  borderRadius: BorderRadius.circular(30),
                 ),
-              ],
+                child: Text(
+                  isPremium ? "Subscribed" : "Subscribe Now",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.1,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
-          );
-        },
+            itemCount: channels.length,
+            itemBuilder: (ctx, i) {
+              final ch = channels[i];
+              final int id = ch['id'];
+              final bool isSubscribed = subscribedChannelIds.contains(id);
+
+              return GestureDetector(
+                onTap: isSubscribed
+                    ? () {
+                        Get.toNamed(RouteHelper.liveTvDetailsScreen,
+                            arguments: id);
+                      }
+                    : null, // Locked
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Stack(
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isSubscribed ? Icons.live_tv : Icons.lock,
+                            color: isSubscribed ? Colors.white70 : Colors.grey,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            ch['title'] ?? "Channel",
+                            style: TextStyle(
+                              color: isSubscribed
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                      if (!isSubscribed)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

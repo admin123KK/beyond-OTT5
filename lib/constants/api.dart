@@ -14,7 +14,7 @@ class ApiConstants {
   static const String deviceMoviesEndpoint = "$baseUrl/api/movies";
   static const String deviceSlidersEndpoint = "$baseUrl/api/sliders";
   static const String deviceLiveTVEndpoint =
-      "$baseUrl /api/live-television/{{scope}}";
+      "$baseUrl /api/live-television/atll";
   static const String deviceFeaturedEndpoint =
       "$baseUrl/api/section/featuredapi/sliders";
   static const String deviceRecentSectionEndpoint =

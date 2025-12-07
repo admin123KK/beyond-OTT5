@@ -52,7 +52,6 @@ import '../../view/screens/live_tv_details/live_tv_details_screen.dart';
 
 class RouteHelper {
   static const String splashScreen = '/splash-screen';
-
   //auth
   static const String loginScreen = '/login-screen';
   static const String onboardScreen = '/onboard-screen';
@@ -63,7 +62,7 @@ class RouteHelper {
   static const String verifyPassCodeScreen = '/verify-pass-code-screen';
   static const String resetPasswordScreen = '/reset-pass-screen';
 
-  //sub category
+  //sub category\
   static const String subCategoryScreen = '/sub-category-screen';
 
   //nav screen
@@ -129,7 +128,6 @@ class RouteHelper {
   static const String tournamentListScreen = "/event-list-screen";
   static const String tournamentDetailsScreen = "/event-details-screen";
   static const String gameWatchScreen = "/game-watch-screen";
-
   static List<GetPage> routes = [
     GetPage(name: splashScreen, page: () => const SplashScreen()),
     GetPage(name: onboardScreen, page: () => const OnBoardingScreen()),
@@ -173,11 +171,11 @@ class RouteHelper {
 
     GetPage(name: homeScreen, page: () => const HomeScreen()),
     GetPage(name: movieDetailsScreen, page: () => MovieDetailsScreen()),
-    GetPage(name: testingScreen, page: () => TestingPage()),
+    GetPage(name: testingScreen, page: () => TestLiveTvScreen()),
     GetPage(
         name: searchScreen,
         page: () => SearchScreen(searchText: Get.arguments)),
-    GetPage(name: allLiveTVScreen, page: () => const AllLiveTvScreen()),
+    GetPage(name: allLiveTVScreen, page: () => AllLiveTvScreen()),
     GetPage(name: liveTvDetailsScreen, page: () => const LiveTvDetailsScreen()),
     GetPage(
         name: subCategoryScreen,
