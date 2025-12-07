@@ -16,28 +16,28 @@ class LiveTvDetailsScreen extends StatefulWidget {
 }
 
 class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
+  VideoPlayerController? _videoController;
   ChewieController? _chewieController;
-  VideoPlayerController? _videoPlayerController;
 
   String title = "Loading...";
-  String description = "Fetching channel details...";
+  String description = "Connecting...";
   String streamUrl = "";
   String posterUrl =
       "https://image.tmdb.org/t/p/w1280/8cdWjvZQUExUUTzyp4t6EDMUB2u.jpg";
   bool isLoading = true;
+  bool isBuffering = false;
 
   @override
   void initState() {
     super.initState();
     final int channelId = Get.arguments as int;
-    fetchChannelAndPlay(channelId);
+    loadAndPlay(channelId);
   }
 
-  Future<void> fetchChannelAndPlay(int id) async {
+  Future<void> loadAndPlay(int id) async {
     try {
       final res = await http.get(
         Uri.parse("https://ott.beyondtechnepal.com/api/live-television/all"),
-        headers: {'Accept': 'application/json'},
       );
 
       if (res.statusCode == 200) {
@@ -47,8 +47,8 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
 
         if (channel != null) {
           setState(() {
-            title = channel['title'] ?? "Live Channel";
-            description = channel['description'] ?? "No description available.";
+            title = channel['title'] ?? "Live TV";
+            description = channel['description'] ?? "Live streaming now";
             streamUrl = channel['url'] ?? "";
             final img = channel['image'] ?? "";
             posterUrl = img.isNotEmpty
@@ -58,55 +58,69 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
           });
 
           if (streamUrl.isNotEmpty) {
-            _initializePlayer(streamUrl);
+            _playStream(streamUrl);
           }
         }
       }
     } catch (e) {
       setState(() {
         isLoading = false;
-        description = "Failed to load channel";
+        description = "Check internet";
       });
     }
   }
 
-  void _initializePlayer(String url) {
-    _videoPlayerController = VideoPlayerController.network(url);
+  void _playStream(String url) {
+    _videoController?.dispose();
+    _chewieController?.dispose();
 
-    _videoPlayerController!.initialize().then((_) {
+    _videoController = VideoPlayerController.network(
+      url,
+      formatHint: VideoFormat.hls,
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    );
+
+    _videoController!.initialize().then((_) {
+      _videoController!.play();
+
       _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController!,
+        videoPlayerController: _videoController!,
         autoPlay: true,
-        looping: true,
+        looping: false, // LIVE STREAM = NO LOOPING
         allowFullScreen: true,
+        allowMuting: true,
+        showControls: true,
         materialProgressColors: ChewieProgressColors(
           playedColor: MyColor.primaryColor,
           handleColor: MyColor.primaryColor,
           backgroundColor: Colors.grey.shade900,
           bufferedColor: Colors.white24,
         ),
-        // Custom Controls with +15 / -15 sec buttons
-        cupertinoProgressColors: ChewieProgressColors(
-          playedColor: MyColor.primaryColor,
-          handleColor: MyColor.primaryColor,
-          backgroundColor: Colors.grey,
-          bufferedColor: Colors.white30,
-        ),
-        // Modern way to add custom buttons
       );
 
-      // Add custom overlay buttons on top of player
-      _chewieController!.addListener(() {
-        if (_chewieController!.isFullScreen) {
-          // You can add PiP or other logic here later
+      // THIS IS THE MAGIC: Manual control over play/pause
+      _videoController!.addListener(() {
+        final buffering = _videoController!.value.isBuffering;
+        if (buffering != isBuffering) {
+          setState(() => isBuffering = buffering);
+        }
+
+        // If user pauses and plays again → force restart if needed
+        if (!_videoController!.value.isPlaying &&
+            _videoController!.value.position > Duration.zero) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted && !_videoController!.value.isPlaying) {
+              _videoController!.play();
+            }
+          });
         }
       });
 
-      if (mounted) setState(() {});
+      setState(() {});
     }).catchError((e) {
       setState(() {
         isLoading = false;
-        description = "Stream failed to load";
+        description = "Stream not available";
       });
     });
   }
@@ -114,7 +128,7 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
   @override
   void dispose() {
     _chewieController?.dispose();
-    _videoPlayerController?.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -128,7 +142,6 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Background + Player
                 Stack(
                   children: [
                     Container(
@@ -142,20 +155,15 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                         ),
                       ),
                       child: Container(
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.9)
-                            ],
+                            colors: [Colors.transparent, Colors.black87],
                           ),
                         ),
                       ),
                     ),
-
-                    // Live Player Box
                     Positioned(
                       top: 50,
                       left: 20,
@@ -164,11 +172,11 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                         height: 200,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            const BoxShadow(
+                          boxShadow: const [
+                            BoxShadow(
                                 color: Colors.black45,
                                 blurRadius: 20,
-                                spreadRadius: 5),
+                                spreadRadius: 5)
                           ],
                         ),
                         child: ClipRRect(
@@ -177,29 +185,32 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                               ? Container(
                                   color: Colors.black87,
                                   child: const Center(
-                                    child: CircularProgressIndicator(
-                                        color: MyColor.primaryColor),
-                                  ),
-                                )
+                                      child: CircularProgressIndicator(
+                                          color: MyColor.primaryColor)))
                               : _chewieController != null
-                                  ? Chewie(controller: _chewieController!)
+                                  ? Stack(
+                                      children: [
+                                        Chewie(controller: _chewieController!),
+                                        if (isBuffering)
+                                          Container(
+                                            color: Colors.black54,
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                  color: MyColor.primaryColor),
+                                            ),
+                                          ),
+                                      ],
+                                    )
                                   : Container(
                                       color: Colors.black87,
                                       child: const Center(
-                                        child: Text(
-                                          "Stream Not Available",
-                                          style: TextStyle(
-                                              color: Colors.red, fontSize: 16),
-                                        ),
-                                      ),
-                                    ),
+                                          child: CircularProgressIndicator(
+                                              color: MyColor.primaryColor))),
                         ),
                       ),
                     ),
                   ],
                 ),
-
-                // Title + LIVE Badge
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -211,49 +222,39 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: MyColor.primaryColor,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: const Text(
-                              "LIVE",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
-                            ),
+                                color: MyColor.primaryColor,
+                                borderRadius: BorderRadius.circular(30)),
+                            child: const Text("LIVE",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            child: Text(title,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-
-                      // Channel Description Label
-                      const Text(
-                        "Channel Description",
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600),
-                      ),
+                      const Text("Channel Description",
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      Text(
-                        description,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 15, height: 1.5),
-                      ),
+                      Text(description,
+                          style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                              height: 1.5)),
                     ],
                   ),
                 ),
-
                 const Divider(height: 1, color: MyColor.bodyTextColor),
                 const SizedBox(height: 100),
               ],
@@ -269,12 +270,8 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black45, blurRadius: 10)
-                    ],
-                  ),
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle),
                   child: const Icon(Icons.arrow_back_ios_new,
                       color: Colors.white, size: 22),
                 ),
