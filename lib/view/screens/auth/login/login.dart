@@ -69,6 +69,99 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Check verification status after login
+  Future<void> _checkVerificationStatus(String token, String email) async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.verifyStatusEndpoint),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        // If already verified → go home
+        if (json['remark'] == 'already_verified') {
+          Get.offAllNamed(RouteHelper.homeScreen);
+          return;
+        }
+      }
+
+      // If not verified → show dialog
+      _showVerificationDialog(email);
+    } catch (e) {
+      // If API fails, assume not verified and show dialog
+      _showVerificationDialog(email);
+    }
+  }
+
+  // Beautiful Verification Alert Dialog
+  void _showVerificationDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.verified_user,
+                color: MyColor.primaryColor, size: 32),
+            const SizedBox(width: 12),
+            Text("Verify Your Account",
+                style: mulishBold.copyWith(color: Colors.white, fontSize: 20)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Your account is not verified yet.\nPlease verify your email to continue.",
+              style: mulishMedium.copyWith(color: Colors.white70, fontSize: 15),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              email,
+              style: mulishSemiBold.copyWith(
+                  color: MyColor.primaryColor, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          // Later Button
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.offAllNamed(RouteHelper.homeScreen);
+            },
+            child: Text("Later",
+                style: mulishSemiBold.copyWith(color: Colors.white70)),
+          ),
+
+          // Verify Now Button
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed(RouteHelper.verifyEmailScreen, arguments: email);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MyColor.primaryColor,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text("Verify Now",
+                style: mulishBold.copyWith(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Normal Email/Password Login
   Future<void> _loginUser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -94,13 +187,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
         final token = jsonResponse['data']['access_token'];
         final userId = jsonResponse['data']['user']['id'];
+        final email = jsonResponse['data']['user']['email'] ?? '';
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', token);
         await prefs.setInt('user_id', userId);
         await prefs.setBool('is_logged_in', true);
-
-        Get.offAllNamed(RouteHelper.homeScreen);
 
         Get.snackbar(
           "Welcome Back!",
@@ -112,6 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: 12,
           icon: const Icon(Icons.check_circle, color: Colors.white),
         );
+
+        // Check verification status
+        _checkVerificationStatus(token, email);
       } else {
         String errorMsg =
             jsonResponse['message']?['error']?[0] ?? "Invalid credentials";
@@ -132,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
-        return; // User cancelled
+        return;
       }
 
       final googleAuth = await googleUser.authentication;
@@ -145,15 +240,14 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final response = await http.post(
-        Uri.parse(
-            ApiConstants.socialLoginEndpoint), // Your endpoint from Postman
+        Uri.parse(ApiConstants.socialLoginEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: jsonEncode({
           "provider": "google",
-          "token": accessToken, // This is what your backend expects
+          "token": accessToken,
           "email": googleUser.email,
           "name": googleUser.displayName ?? "",
           "id": googleUser.id,
@@ -165,20 +259,18 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
         final token = jsonResponse['data']['access_token'];
         final userId = jsonResponse['data']['user']['id'];
+        final email = jsonResponse['data']['user']['email'] ?? '';
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', token);
         await prefs.setInt('user_id', userId);
         await prefs.setBool('is_logged_in', true);
 
-        Get.offAllNamed(RouteHelper.homeScreen);
+        Get.snackbar("Welcome!", "Signed in with Google",
+            backgroundColor: MyColor.primaryColor, colorText: Colors.white);
 
-        Get.snackbar(
-          "Welcome!",
-          "Signed in with Google",
-          backgroundColor: MyColor.primaryColor,
-          colorText: Colors.white,
-        );
+        // Check verification status for Google login too
+        _checkVerificationStatus(token, email);
       } else {
         String error =
             jsonResponse['message']?['error']?[0] ?? "Google login failed";
@@ -218,8 +310,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: MediaQuery.of(context).size.height * 0.09),
                     const AuthImageWidget(),
                     SizedBox(height: MediaQuery.of(context).size.height * 0.06),
-
-                    // Username/Email Field
                     InputTextFieldWidget(
                       fillColor: Colors.grey[600]!.withOpacity(0.3),
                       hintTextColor: Colors.white,
@@ -229,8 +319,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           v!.isEmpty ? MyStrings.kEmailNullError.tr : null,
                     ),
                     const SizedBox(height: 12),
-
-                    // Password Field
                     InputTextFieldWidget(
                       fillColor: Colors.grey[600]!.withOpacity(0.3),
                       hintTextColor: Colors.white,
@@ -241,8 +329,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           v!.isEmpty ? MyStrings.kPassNullError.tr : null,
                     ),
                     const SizedBox(height: 15),
-
-                    // Forgot Password
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
@@ -251,25 +337,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           MyStrings.forgetYourPassword.tr,
                           style: mulishSemiBold.copyWith(
-                            color: MyColor.primaryColor,
-                            decoration: TextDecoration.underline,
-                          ),
+                              color: MyColor.primaryColor,
+                              decoration: TextDecoration.underline),
                         ),
                       ),
                     ),
                     const SizedBox(height: 35),
-
-                    // Sign In Button
                     _isLoading
                         ? const RoundedLoadingButton()
                         : RoundedButton(
                             text: MyStrings.signIn.tr, press: _loginUser),
-
                     const SizedBox(height: 35),
-
-                    // OR Divider
                     const Row(
-                      children: const [
+                      children: [
                         Expanded(child: Divider(color: Colors.white38)),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
@@ -281,10 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Expanded(child: Divider(color: Colors.white38)),
                       ],
                     ),
-
                     const SizedBox(height: 25),
-
-                    // Google Sign-In Button
                     GestureDetector(
                       onTap: _isLoading ? null : _handleGoogleSignIn,
                       child: Container(
@@ -293,32 +370,27 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            const BoxShadow(
+                          boxShadow: const [
+                            BoxShadow(
                                 color: Colors.black26,
                                 blurRadius: 8,
-                                offset: const Offset(0, 4))
+                                offset: Offset(0, 4))
                           ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Image.asset(MyImages.gmailIcon,
-                                height: 28, width: 28), // Your google.png
+                                height: 28, width: 28),
                             const SizedBox(width: 14),
-                            Text(
-                              "Continue with Google",
-                              style: mulishBold.copyWith(
-                                  color: Colors.black87, fontSize: 16),
-                            ),
+                            Text("Continue with Google",
+                                style: mulishBold.copyWith(
+                                    color: Colors.black87, fontSize: 16)),
                           ],
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 50),
-
-                    // Don't have account?
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -335,7 +407,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-
                     SizedBox(height: MediaQuery.of(context).size.height * 0.06),
                   ],
                 ),

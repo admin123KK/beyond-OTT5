@@ -8,7 +8,6 @@ import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/view/screens/account/chagne_password/change_password.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -34,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController zipController;
   late TextEditingController countryCodeController;
   late TextEditingController dialCodeController;
-  late TextEditingController countryNameController; // New: Full country name
+  late TextEditingController countryNameController;
 
   // User Data
   String firstName = '';
@@ -48,8 +47,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String zip = '';
   String dialCode = '';
   String countryCode = '';
-  String countryName = ''; // New
+  String countryName = '';
   bool isEmailVerified = false;
+  bool isMobileVerified = false;
 
   @override
   void initState() {
@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     zipController = TextEditingController();
     countryCodeController = TextEditingController();
     dialCodeController = TextEditingController();
-    countryNameController = TextEditingController(); // Init
+    countryNameController = TextEditingController();
 
     _fetchUserProfile();
   }
@@ -126,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           countryName = user['country'] ?? user['country_name'] ?? '';
 
           isEmailVerified = (user['ev'] ?? 0) == 1;
+          isMobileVerified = (user['sv'] ?? 0) == 1;
 
           // Fill controllers
           firstNameController.text = firstName;
@@ -160,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool successName = false;
     String errorMsg = "";
 
-    // API 1: submitInfoEndpoint - Mobile + Country Info
+    // API 1: submitInfoEndpoint
     try {
       final body = {
         "country_code": countryCodeController.text.trim().toUpperCase(),
@@ -187,13 +188,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (resp.statusCode == 200 && jsonResp['status'] == 'success') {
         successContact = true;
       } else {
-        errorMsg = jsonResp['message']?['error']?[0] ?? "Contact info failed";
+        errorMsg = jsonResp['message']?['error']?[0] ?? "Contact update failed";
       }
     } catch (e) {
-      errorMsg = "Failed to update contact info";
+      errorMsg = "Failed to update contact";
     }
 
-    // API 2: updateProfileEndpoint - First Name & Last Name
+    // API 2: updateProfileEndpoint (Name + Address)
     try {
       var request = http.MultipartRequest(
           'POST', Uri.parse(ApiConstants.updateProfileEndpoint));
@@ -216,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         successName = true;
       }
     } catch (e) {
-      // Ignore name update error if contact was successful
+      // Ignore if name update fails
     }
 
     // Final Result
@@ -265,9 +266,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isEditing = false);
   }
 
+  // Temporary Verify Now Action (will be replaced later)
+  void _onVerifyNowPressed() {
+    Get.snackbar("Coming Soon", "Verification page is under development",
+        backgroundColor: Colors.orange, colorText: Colors.white);
+    // Later: Get.toNamed(RouteHelper.verifyAccountScreen);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool showBackButton = Get.routing.previous != '/';
+    final bool isVerified = isEmailVerified && isMobileVerified;
 
     if (_isLoading) {
       return const Scaffold(
@@ -322,9 +331,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: mulishMedium.copyWith(
                       color: Colors.white70, fontSize: 14)),
               const SizedBox(width: 8),
-              Icon(isEmailVerified ? Icons.verified : Icons.info_outline,
-                  color: isEmailVerified ? Colors.green : Colors.orange,
-                  size: 18),
+              Icon(isVerified ? Icons.verified : Icons.info_outline,
+                  color: isVerified ? Colors.green : Colors.orange, size: 18),
+              if (!isVerified) const SizedBox(width: 6),
+              if (!isVerified)
+                Text("Not Verified",
+                    style: mulishMedium.copyWith(
+                        color: Colors.orange, fontSize: 13)),
             ]),
 
             const SizedBox(height: 30),
@@ -339,11 +352,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildField("ZIP Code", zipController),
             _buildField("Country Code (e.g. NP)", countryCodeController),
             _buildField("Dial Code (e.g. +977)", dialCodeController),
-            _buildField(
-                "Country (e.g. Nepal)", countryNameController), // New Field
+            _buildField("Country (e.g. Nepal)", countryNameController),
 
             const SizedBox(height: 40),
 
+            // BUTTONS LOGIC
             if (_isEditing)
               Row(children: [
                 Expanded(
@@ -383,33 +396,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ])
             else
               Row(children: [
-                Expanded(
-                    child: ElevatedButton(
-                        onPressed: _toggleEdit,
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: MyColor.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12))),
-                        child: const Text("Edit Profile",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)))),
-                const SizedBox(width: 16),
-                Expanded(
+                InkWell(
+                  onTap: _toggleEdit,
+                  child: Container(
+                    height: 35,
+                    width: 150,
+                    decoration: BoxDecoration(
+                        color: MyColor.primaryColor,
+                        borderRadius: BorderRadius.circular(20)),
+                    child: const Center(
+                        child: Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, color: Colors.white),
+                    )),
+                  ),
+                ),
+
+                // Show "Verify Now" only if NOT verified
+                if (!isVerified) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
                     child: OutlinedButton(
-                        onPressed: () =>
-                            Get.to(() => const ChangePasswordScreen()),
-                        style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                                color: MyColor.primaryColor, width: 2),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12))),
-                        child: const Text("Change P",
-                            style: TextStyle(
-                                color: MyColor.primaryColor,
-                                fontWeight: FontWeight.w600)))),
+                      onPressed: _onVerifyNowPressed,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.orange, width: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text("Verify Now",
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
               ]),
 
             const SizedBox(height: 40),

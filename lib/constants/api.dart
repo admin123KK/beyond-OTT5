@@ -26,4 +26,8 @@ class ApiConstants {
   static const String getInfoEndpoint = "$baseUrl/api/user-info";
   static const String updateProfileEndpoint = "$baseUrl/api/profile-setting";
   static const String submitInfoEndpoint = "$baseUrl/api/user-data-submit";
+
+  static const String verifyStatusEndpoint = "$baseUrl/api/authorization";
+  static const String sendEmailEndpoint = "$baseUrl/api/password/email";
+  static const String verifyEmailEndpoint = "$baseUrl/api/verify-email";
 }

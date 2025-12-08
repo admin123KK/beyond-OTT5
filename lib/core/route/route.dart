@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'package:play_lab/view/components/nav_drawer/testing_page.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/active_session.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/setting_screen.dart';
+import 'package:play_lab/view/screens/auth/forget_password/verify_forget_password_code_screen/email_account.dart';
+import 'package:play_lab/view/screens/auth/forget_password/verify_forget_password_code_screen/verify_page.dart';
 import 'package:play_lab/view/screens/bottom_nav_pages/all_movies/movie_purchase.dart';
 import 'package:play_lab/view/screens/bottom_nav_pages/all_movies/watch_movie.dart';
 import 'package:play_lab/view/screens/faq/faq_screen.dart';
@@ -88,6 +90,8 @@ class RouteHelper {
   static const String subscribeScreen = '/subscribe-screen';
   static const String depositScreen = '/deposit-screen';
   static const String walletRecharge = '/walletrecharge-screen';
+  static const String verifyEmailScreen = "/verify-screen";
+  static const String codeVerifyScreen = "/code-verify-screen";
 
   static const String paymentMethodScreen = '/paymentmethod-screen';
 
@@ -191,6 +195,8 @@ class RouteHelper {
     GetPage(name: faqScreen, page: () => const FaqScreen()),
 
     GetPage(name: allTicketScreen, page: () => const AllTicketScreen()),
+    GetPage(name: verifyEmailScreen, page: () => const VerifyPageScreen()),
+    GetPage(name: codeVerifyScreen, page: () => EmailVerifyAccount()),
     GetPage(
         name: ticketDetailsdScreen, page: () => const TicketDetailsScreen()),
     GetPage(name: newTicketScreen, page: () => const NewTicketScreen()),
