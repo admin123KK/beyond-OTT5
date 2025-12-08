@@ -1,4 +1,3 @@
-// all_live_tv_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -66,7 +65,7 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 "Get access to premium sports channels and more!",
                 style: TextStyle(color: Colors.white70, fontSize: 15),
                 textAlign: TextAlign.center,
