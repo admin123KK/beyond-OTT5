@@ -24,5 +24,6 @@ class ApiConstants {
   static const String logoutEndpoint = "$baseUrl/api/logout";
 
   static const String getInfoEndpoint = "$baseUrl/api/user-info";
+  static const String updateProfileEndpoint = "$baseUrl/api/profile-setting";
   static const String submitInfoEndpoint = "$baseUrl/api/user-data-submit";
 }

@@ -1,5 +1,6 @@
 // navigation_drawer_widget.dart
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -57,7 +58,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
         setState(() {
           firstName = user['firstname'] ?? 'User';
           lastName = user['lastname'] ?? '';
-          email = user['email'] ?? 'No email';
+          email = user['username'] ?? 'No username';
           imageUrl = user['image'] != null
               ? "${ApiConstants.baseUrl}/${user['image']}"
               : '';
