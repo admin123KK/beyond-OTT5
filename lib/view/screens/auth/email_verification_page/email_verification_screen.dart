@@ -50,6 +50,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
+  // AUTO SUBMIT WHEN 6 DIGITS ARE ENTERED
+  void _checkAndAutoSubmit() {
+    if (_otpCode.length == 6 && !_isLoading) {
+      _verifyCode(); // AUTO SUBMIT!
+    }
+  }
+
   // Verify the code + SAVE IT for next screen
   Future<void> _verifyCode() async {
     if (_otpCode.length != 6) {
@@ -78,10 +85,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       final jsonResponse = json.decode(response.body);
 
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
-        // SAVE THE OTP CODE FOR RESET PASSWORD SCREEN
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            'verified_otp_code', _otpCode); // ← THIS IS CRITICAL
+        await prefs.setString('verified_otp_code', _otpCode);
 
         Get.snackbar(
           "Verified!",
@@ -183,13 +188,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
+
+                  // AUTO SUBMIT ON 6TH DIGIT
                   OTPFieldWidget(
                     onChanged: (value) {
                       _otpCode = value;
-                      if (_errorMessage != null)
+                      if (_errorMessage != null) {
                         setState(() => _errorMessage = null);
+                      }
+                      _checkAndAutoSubmit(); // AUTO SUBMIT HERE!
                     },
                   ),
+
                   if (_errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -198,10 +208,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                           textAlign: TextAlign.center),
                     ),
                   const SizedBox(height: 30),
+
+                  // Button still works as backup
                   _isLoading
                       ? const RoundedLoadingButton()
                       : RoundedButton(
-                          text: MyStrings.verify.tr, press: _verifyCode),
+                          text: MyStrings.verify.tr,
+                          press: _verifyCode,
+                        ),
+
                   const SizedBox(height: 40),
                   Text(MyStrings.didNotReceiveCode.tr,
                       style: mulishRegular.copyWith(color: MyColor.textColor)),

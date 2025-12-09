@@ -2,6 +2,7 @@ class ApiConstants {
   ApiConstants._();
 
   static const String baseUrl = "https://ott.beyondtechnepal.com";
+
   static const String registerEndpoint = "$baseUrl/api/register";
   static const String loginEndpoint = "$baseUrl/api/login";
   static const String socialLoginEndpoint = "$baseUrl/api/password/email";
@@ -28,6 +29,7 @@ class ApiConstants {
   static const String submitInfoEndpoint = "$baseUrl/api/user-data-submit";
 
   static const String verifyStatusEndpoint = "$baseUrl/api/authorization";
+
   static const String sendEmailEndpoint = "$baseUrl/api/password/email";
   static const String verifyEmailEndpoint = "$baseUrl/api/verify-email";
 

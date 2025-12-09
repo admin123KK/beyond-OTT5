@@ -1,6 +1,5 @@
 // navigation_drawer_widget.dart
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -22,7 +21,7 @@ class NavigationDrawerWidget extends StatefulWidget {
 class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
   String firstName = "Guest";
   String lastName = "";
-  String email = "guest@example.com";
+  String userName = "guest@example.com";
   String imageUrl = "";
   String balance = "NRS. 0/-";
   bool isLoading = true;
@@ -58,7 +57,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
         setState(() {
           firstName = user['firstname'] ?? 'User';
           lastName = user['lastname'] ?? '';
-          email = user['username'] ?? 'No username';
+          userName = user['username'] ?? 'No username';
           imageUrl = user['image'] != null
               ? "${ApiConstants.baseUrl}/${user['image']}"
               : '';
@@ -187,7 +186,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
                                 ),
                           const SizedBox(height: 4),
                           Text(
-                            email,
+                            "#${userName}",
                             style: mulishRegular.copyWith(
                                 color: Colors.white70, fontSize: 13),
                             overflow: TextOverflow.ellipsis,

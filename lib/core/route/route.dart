@@ -163,8 +163,7 @@ class RouteHelper {
     GetPage(name: walletTopUpScreen, page: () => const WalletTopUpScreen()),
     GetPage(name: registrationScreen, page: () => const RegistrationScreen()),
     GetPage(
-        name: emailVerificationScreen,
-        page: () => const EmailVerificationScreen()),
+        name: emailVerificationScreen, page: () => EmailVerificationScreen()),
     GetPage(
         name: smsVerificationScreen, page: () => const SmsVerificationScreen()),
     GetPage(
@@ -195,6 +194,7 @@ class RouteHelper {
     GetPage(name: faqScreen, page: () => const FaqScreen()),
 
     GetPage(name: allTicketScreen, page: () => const AllTicketScreen()),
+
     GetPage(name: verifyEmailScreen, page: () => const VerifyPageScreen()),
     GetPage(name: codeVerifyScreen, page: () => EmailVerifyAccount()),
     GetPage(

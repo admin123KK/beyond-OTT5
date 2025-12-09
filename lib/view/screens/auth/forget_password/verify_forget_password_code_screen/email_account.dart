@@ -1,256 +1,242 @@
-// email_verify_account.dart
+// email_verify_account.dart ← EXACT SAME NAME
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
+import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/view/components/auth_image.dart';
+import 'package:play_lab/core/utils/util.dart';
+import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/bg_widget/bg_image_widget.dart';
-import 'package:play_lab/view/components/buttons/rounded_button.dart'; // Fixed import
+import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/buttons/rounded_loading_button.dart';
+import 'package:play_lab/view/components/otp_field_widget/otp_field_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EmailVerifyAccount extends StatefulWidget {
+  const EmailVerifyAccount({super.key});
+
   @override
   State<EmailVerifyAccount> createState() => _EmailVerifyAccountState();
 }
 
 class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  String? _email;
+  String _otpCode = '';
   bool _isLoading = false;
-  bool _isResending = false;
+  bool _isResendLoading = false;
+  String? _errorMessage;
 
   @override
-  void dispose() {
-    for (var controller in _controllers) controller.dispose();
-    for (var node in _focusNodes) node.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    MyUtil.changeTheme();
+    SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
+    _loadSavedEmail();
   }
 
-  void _moveToNext(int index) {
-    if (index < 5 && _controllers[index].text.length == 1) {
-      _focusNodes[index + 1].requestFocus();
-    } else if (index == 5 && _controllers.every((c) => c.text.isNotEmpty)) {
-      _verifyCode(); // Auto submit when 6 digits filled
-    }
-  }
-
-  void _moveToPrevious(int index) {
-    if (index > 0 && _controllers[index].text.isEmpty) {
-      _focusNodes[index - 1].requestFocus();
-    }
-  }
-
-  Future<String?> _getToken() async {
+  Future<void> _loadSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token');
+    setState(() {
+      _email = prefs.getString('forget_pass_email') ?? '';
+    });
   }
 
-  // Verify OTP Code
-  Future<void> _verifyCode() async {
-    final code = _controllers.map((c) => c.text).join();
+  // AUTO SUBMIT WHEN 6 DIGITS ARE ENTERED
+  void _checkAndSubmit() {
+    if (_otpCode.length == 6) {
+      _verifyCode(); // AUTO SUBMIT!
+    }
+  }
 
-    if (code.length != 6) {
-      Get.snackbar("Invalid", "Please enter full 6-digit code",
-          backgroundColor: Colors.red, colorText: Colors.white);
+  // Verify the code + SAVE IT for next screen
+  Future<void> _verifyCode() async {
+    if (_otpCode.length != 6) {
+      setState(() => _errorMessage = "Please enter 6-digit code");
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final token = await _getToken();
       final response = await http.post(
-        Uri.parse(ApiConstants.verifyEmailEndpoint),
+        Uri.parse(ApiConstants.verifyCodeEndpoint),
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
+          'Accept': 'application/json'
         },
         body: jsonEncode({
-          "code": code,
+          "code": _otpCode,
+          "email": _email,
         }),
       );
 
-      final json = jsonDecode(response.body);
+      final jsonResponse = json.decode(response.body);
 
-      if (response.statusCode == 200 && json['status'] == 'success') {
-        Get.snackbar("Success", "Email verified successfully!",
-            backgroundColor: Colors.green, colorText: Colors.white);
-        Get.offAllNamed(RouteHelper.homeScreen); // Go to Home
+      if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('verified_otp_code', _otpCode);
+
+        Get.snackbar(
+          "Verified!",
+          "Code verified successfully",
+          backgroundColor: MyColor.primaryColor,
+          colorText: Colors.white,
+        );
+
+        Get.offAllNamed(RouteHelper.homeScreen);
       } else {
-        Get.snackbar("Failed",
-            json['message']?['error']?[0] ?? "Invalid or expired code",
-            backgroundColor: Colors.red, colorText: Colors.white);
-        _clearFields();
+        final error =
+            jsonResponse['message']?['error']?[0] ?? "Invalid or expired code";
+        setState(() => _errorMessage = error);
       }
     } catch (e) {
-      Get.snackbar("Error", "Network error. Try again.",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      setState(() => _errorMessage = "Network error. Please try again.");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   // Resend Code
   Future<void> _resendCode() async {
-    setState(() => _isResending = true);
+    if (_email == null || _email!.isEmpty) {
+      Get.snackbar("Error", "Email not found!");
+      return;
+    }
+
+    setState(() => _isResendLoading = true);
 
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.verifyEmailEndpoint),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse(ApiConstants.forgotPasswordEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: jsonEncode({
+          "type": "email",
+          "value": _email,
+        }),
       );
 
-      final json = jsonDecode(response.body);
+      final jsonResponse = json.decode(response.body);
 
-      if (response.statusCode == 200 && json['status'] == 'success') {
-        Get.snackbar("Sent!", "New code sent to entered email",
-            backgroundColor: Colors.green, colorText: Colors.white);
-        _clearFields();
+      if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
+        Get.snackbar("Sent!", "New code sent to $_email",
+            backgroundColor: MyColor.primaryColor, colorText: Colors.white);
       } else {
-        Get.snackbar("Failed", json['message'] ?? "Could not resend code",
-            backgroundColor: Colors.red);
+        Get.snackbar("Failed", "Could not resend code");
       }
     } catch (e) {
-      Get.snackbar("Error", "Check internet connection",
-          backgroundColor: Colors.red);
+      Get.snackbar("Error", "No internet");
     } finally {
-      setState(() => _isResending = false);
+      if (mounted) setState(() => _isResendLoading = false);
     }
-  }
-
-  void _clearFields() {
-    for (var controller in _controllers) controller.clear();
-    _focusNodes[0].requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Get.back(),
-        ),
-        title: Text("Email Verification",
-            style: mulishBold.copyWith(color: Colors.white, fontSize: 20)),
-      ),
-      body: Stack(
-        children: [
-          const MyBgWidget(image: MyImages.onboardingBG),
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 100, 20, 20),
-            child: Column(
-              children: [
-                const AuthImageWidget(),
-                const SizedBox(height: 40),
-
-                // Email Icon
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white),
-                  child: Image.asset(MyImages.emailVerifyImage,
-                      height: 60, color: MyColor.primaryColor),
-                ),
-
-                const SizedBox(height: 30),
-
-                Text(
-                  "We sent a verification code to",
-                  style: mulishMedium.copyWith(
-                      color: Colors.white70, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                // Text(
-                //   widget.ema,
-                //   style: mulishBold.copyWith(
-                //       color: MyColor.primaryColor, fontSize: 17),
-                //   textAlign: TextAlign.center,
-                // ),
-
-                const SizedBox(height: 50),
-
-                // 6-Digit OTP Input
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(6, (index) {
-                    return SizedBox(
-                      width: 50,
-                      height: 60,
-                      child: TextFormField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        style: mulishBold.copyWith(
-                            color: Colors.white, fontSize: 22),
-                        decoration: InputDecoration(
-                          counterText: "",
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.15),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: MyColor.primaryColor, width: 2),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          if (value.length == 1) _moveToNext(index);
-                          if (value.isEmpty) _moveToPrevious(index);
-                        },
+    return Stack(
+      children: [
+        const MyBgWidget(image: MyImages.onboardingBG),
+        PopScope(
+          canPop: false,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: const CustomAppBar(
+              fromAuth: true,
+              isShowBackBtn: true,
+              title: MyStrings.verifyCode,
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.06),
+                  Center(
+                      child: Image.asset(MyImages.emailVerifyImage,
+                          height: 100, width: 100)),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.06),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: mulishRegular.copyWith(color: MyColor.textColor),
+                        children: [
+                          const TextSpan(
+                              text: "We sent a verification code to\n"),
+                          TextSpan(
+                              text: _email ?? "your email",
+                              style: mulishBold.copyWith(
+                                  color: MyColor.primaryColor)),
+                        ],
                       ),
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 50),
-
-                // Verify Button
-                _isLoading
-                    ? const RoundedLoadingButton()
-                    : RoundedButton(text: "Verify", press: _verifyCode),
-
-                const SizedBox(height: 30),
-
-                // Resend Link
-                GestureDetector(
-                  onTap: _isResending ? null : _resendCode,
-                  child: Text(
-                    "Didn't receive the code?\nRESEND",
-                    textAlign: TextAlign.center,
-                    style: mulishSemiBold.copyWith(
-                      color:
-                          _isResending ? Colors.white38 : MyColor.primaryColor,
-                      fontSize: 15,
-                      decoration: TextDecoration.underline,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 40),
 
-                const SizedBox(height: 50),
-              ],
+                  // AUTO SUBMIT WHEN 6 DIGITS ARE FILLED
+                  OTPFieldWidget(
+                    onChanged: (value) {
+                      _otpCode = value;
+                      if (_errorMessage != null) {
+                        setState(() => _errorMessage = null);
+                      }
+                      _checkAndSubmit(); // AUTO SUBMIT HERE!
+                    },
+                  ),
+
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center),
+                    ),
+                  const SizedBox(height: 30),
+
+                  // Button still there but auto-submit works
+                  _isLoading
+                      ? const RoundedLoadingButton()
+                      : RoundedButton(
+                          text: MyStrings.verify.tr,
+                          press: _verifyCode,
+                        ),
+
+                  const SizedBox(height: 40),
+                  Text(MyStrings.didNotReceiveCode.tr,
+                      style: mulishRegular.copyWith(color: MyColor.textColor)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _isResendLoading ? null : _resendCode,
+                    child: _isResendLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(MyStrings.resend.tr,
+                            style: mulishBold.copyWith(
+                                color: MyColor.primaryColor,
+                                decoration: TextDecoration.underline)),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

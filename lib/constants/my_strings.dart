@@ -61,6 +61,8 @@ class MyStrings {
   static const String smsVerificationMsg =
       "We have sent you an access code to your phone number for sms verification";
 
+  static const String verifyEmail = 'Verify Email';
+  static const String verifyCode = 'Verify Code';
   static const String videoSourceError =
       "Video source doesn't support by this player.";
   static const String platformSpecificError =
