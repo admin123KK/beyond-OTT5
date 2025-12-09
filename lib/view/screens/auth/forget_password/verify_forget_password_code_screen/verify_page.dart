@@ -13,7 +13,7 @@ import 'package:play_lab/view/components/auth_image.dart';
 import 'package:play_lab/view/components/bg_widget/bg_image_widget.dart';
 import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/buttons/rounded_loading_button.dart';
-import 'package:play_lab/view/components/custom_text_form_field.dart';
+import 'package:play_lab/view/components/custom_text_field.dart';
 
 class VerifyPageScreen extends StatefulWidget {
   const VerifyPageScreen({super.key});
@@ -26,21 +26,27 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
   final TextEditingController _emailController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  String? _emailError; // To show error below field
 
   Future<void> _sendVerificationCode() async {
+    // Reset error
+    setState(() => _emailError = null);
+
     if (!_formKey.currentState!.validate()) return;
+
+    final String email = _emailController.text.trim();
 
     setState(() => _isLoading = true);
 
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.sendEmailEndpoint), // CORRECT ENDPOINT
+        Uri.parse(ApiConstants.sendEmailEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         body: jsonEncode({
-          "email": _emailController.text.trim(),
+          "email": email,
         }),
       );
 
@@ -55,26 +61,21 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
           duration: const Duration(seconds: 3),
         );
 
-        // Navigate to OTP Screen with Email
+        // Navigate to OTP screen
         Get.toNamed(
-          RouteHelper.codeVerifyScreen,
-          arguments: _emailController.text.trim(),
+          RouteHelper.verifyEmailScreen,
+          arguments: email,
         );
       } else {
-        Get.snackbar(
-          "Failed",
-          json['message']?['error']?[0] ?? "Could not send verification code",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        setState(() {
+          _emailError = json['message']?['error']?[0] ??
+              "Could not send code. Try again.";
+        });
       }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "No internet connection",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      setState(() {
+        _emailError = "No internet connection";
+      });
     } finally {
       setState(() => _isLoading = false);
     }
@@ -124,20 +125,45 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
 
                 Form(
                   key: _formKey,
-                  child: InputTextFieldWidget(
-                    fillColor: Colors.grey[600]!.withOpacity(0.4),
-                    hintTextColor: Colors.white70,
-                    controller: _emailController,
-                    hintText: "Enter your email",
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Please enter your email";
-                      }
-                      if (!GetUtils.isEmail(value)) {
-                        return "Please enter a valid email";
-                      }
-                      return null;
-                    },
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: _emailController,
+                        hintText: "Enter your email",
+                        isShowBorder: true,
+                        fillColor: MyColor.textFiledFillColor,
+                        inputType: TextInputType.emailAddress,
+                        inputAction: TextInputAction.done,
+                        onChanged: (value) {
+                          if (_emailError != null) {
+                            setState(() => _emailError = null);
+                          }
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter your email";
+                          }
+                          if (!GetUtils.isEmail(value)) {
+                            return "Please enter a valid email";
+                          }
+                          return null;
+                        },
+                      ),
+
+                      // Show error below field (just like Forget Password)
+                      if (_emailError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _emailError!,
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 13),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -155,16 +181,16 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
 
                 // OR Divider
                 Row(
-                  children: [
-                    const Expanded(child: Divider(color: Colors.white38)),
+                  children: const [
+                    Expanded(child: Divider(color: Colors.white38)),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "OR",
-                        style: mulishSemiBold.copyWith(color: Colors.white70),
-                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text("OR",
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600)),
                     ),
-                    const Expanded(child: Divider(color: Colors.white38)),
+                    Expanded(child: Divider(color: Colors.white38)),
                   ],
                 ),
 
