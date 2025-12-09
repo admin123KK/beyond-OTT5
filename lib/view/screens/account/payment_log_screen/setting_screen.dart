@@ -4,6 +4,7 @@ import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/screens/account/payment_log_screen/active_session.dart';
+import 'package:play_lab/view/screens/auth/forget_password/reset_pass_screen/reset_pass_screen.dart';
 
 class SettingScreen extends StatelessWidget {
   const SettingScreen({super.key});
@@ -56,6 +57,54 @@ class SettingScreen extends StatelessWidget {
                                   color: Colors.white, fontSize: 16.5)),
                           const SizedBox(height: 3),
                           Text("Manage Sessions & Login options",
+                              style: mulishMedium.copyWith(
+                                  color: Colors.white60, fontSize: 13.5)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right,
+                        color: Colors.white54, size: 28),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Get.to(() => const ResetPasswordScreen());
+              },
+              child: Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F1F1F),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: MyColor.primaryColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.lock_outline_rounded,
+                          color: MyColor.primaryColor, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Change Password",
+                              style: mulishSemiBold.copyWith(
+                                  color: Colors.white, fontSize: 16.5)),
+                          const SizedBox(height: 3),
+                          Text("Reset your password?",
                               style: mulishMedium.copyWith(
                                   color: Colors.white60, fontSize: 13.5)),
                         ],
