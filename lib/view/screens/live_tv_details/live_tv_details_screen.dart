@@ -1,6 +1,5 @@
 // live_tv_details_screen.dart
 import 'dart:convert';
-
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

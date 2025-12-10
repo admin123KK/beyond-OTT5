@@ -34,4 +34,6 @@ class ApiConstants {
   static const String verifyEmailEndpoint = "$baseUrl/api/verify-email";
 
   static const String policiesEndpoint = "$baseUrl/api/policies";
+
+  static const String getTicketEndpoint = "$baseUrl/api/ticket";
 }

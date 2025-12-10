@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
+import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
@@ -268,8 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Temporary Verify Now Action (will be replaced later)
   void _onVerifyNowPressed() {
-    Get.snackbar("Coming Soon", "Verification page is under development",
-        backgroundColor: Colors.orange, colorText: Colors.white);
+    Get.toNamed(RouteHelper.verifyEmailScreen);
     // Later: Get.toNamed(RouteHelper.verifyAccountScreen);
   }
 

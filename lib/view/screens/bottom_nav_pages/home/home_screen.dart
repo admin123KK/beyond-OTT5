@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -397,9 +398,15 @@ class _HomeScreenState extends State<HomeScreen>
                   onPressed: () => _navigateWithAuthCheck(
                       RouteHelper.movieDetailsScreen,
                       arguments: slug),
-                  icon: const Icon(Icons.play_arrow, size: 28),
-                  label:
-                      const Text("Watch Now", style: TextStyle(fontSize: 16)),
+                  icon: const Icon(
+                    Icons.play_arrow,
+                    size: 28,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    "Watch Now",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: MyColor.primaryColor,
                       padding: const EdgeInsets.symmetric(
