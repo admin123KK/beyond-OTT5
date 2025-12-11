@@ -1,16 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_icons.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
-import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/circle_icon_button.dart';
 import 'package:play_lab/view/components/custom_text_field.dart';
 import 'package:play_lab/view/components/label_text.dart';
 import 'package:play_lab/view/components/show_custom_snackbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NewTicketScreen extends StatefulWidget {
   const NewTicketScreen({super.key});
@@ -20,14 +24,15 @@ class NewTicketScreen extends StatefulWidget {
 }
 
 class _NewTicketScreenState extends State<NewTicketScreen> {
-  final TextEditingController _subjectController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
-  final FocusNode _messageFocusNode = FocusNode();
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  final _messageFocusNode = FocusNode();
 
-  String? _selectedPriority = "Medium";
+  String _selectedPriority = "Medium";
   final List<String> _priorityList = ["Low", "Medium", "High", "Urgent"];
 
   final List<Map<String, dynamic>> _attachments = [];
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -37,19 +42,86 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
     super.dispose();
   }
 
-  void _showSuccess() {
-    CustomSnackbar.showCustomSnackbar(
-      errorList: [],
-      msg: [MyStrings.ticketCreateSuccessfully],
-      isError: false,
-    );
-    // Clear form
-    _subjectController.clear();
-    _messageController.clear();
+  Future<void> _submitTicket() async {
+    if (_subjectController.text.trim().isEmpty ||
+        _messageController.text.trim().isEmpty) {
+      CustomSnackbar.showCustomSnackbar(
+        errorList: [MyStrings.pleaseFillOutTheField],
+        msg: [],
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.createTicketEndpoint),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "subject": _subjectController.text.trim(),
+          "message": _messageController.text.trim(),
+          "priority": _selectedPriority.toLowerCase(),
+        }),
+      );
+
+      final json = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        CustomSnackbar.showCustomSnackbar(
+          errorList: [],
+          msg: [
+            json['message']?['success']?[0] ??
+                MyStrings.ticketCreateSuccessfully
+          ],
+          isError: false,
+        );
+
+        _subjectController.clear();
+        _messageController.clear();
+        setState(() {
+          _selectedPriority = "Medium";
+          _attachments.clear();
+        });
+        Get.back();
+      } else {
+        throw Exception(json['message'] ?? 'Failed to create ticket');
+      }
+    } catch (e) {
+      CustomSnackbar.showCustomSnackbar(
+        errorList: [e.toString().replaceAll('Exception: ', '')],
+        msg: [],
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _addDummyAttachment() {
+    if (_attachments.length >= 5) {
+      CustomSnackbar.showCustomSnackbar(
+          errorList: [MyStrings.attactmentError], msg: [], isError: true);
+      return;
+    }
+    final names = ["screenshot.jpg", "invoice.pdf", "report.docx", "data.xlsx"];
+    final types = ["image", "pdf", "doc", "xlsx"];
+    final i = DateTime.now().millisecond % 4;
+
     setState(() {
-      _selectedPriority = "Medium";
-      _attachments.clear();
+      _attachments.add({"name": names[i], "type": types[i]});
     });
+
+    CustomSnackbar.showCustomSnackbar(
+        errorList: [], msg: ["${names[i]} attached"], isError: false);
   }
 
   @override
@@ -70,7 +142,6 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
             CustomTextField(
               hintText: MyStrings.enterYourSubject.tr,
               controller: _subjectController,
-              isPassword: false,
               nextFocus: _messageFocusNode,
               onChanged: null,
             ),
@@ -85,28 +156,20 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
               decoration: BoxDecoration(
                 color: MyColor.textFieldColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: MyColor.borderColor, width: 1),
+                border: Border.all(color: MyColor.borderColor),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedPriority,
-                  dropdownColor: MyColor.textFieldColor,
-                  icon: Icon(Icons.keyboard_arrow_down_rounded,
-                      color: MyColor.primaryColor),
                   isExpanded: true,
-                  items: _priorityList.map((priority) {
-                    return DropdownMenuItem(
-                      value: priority,
-                      child: Text(
-                        priority,
-                        style: mulishSemiBold.copyWith(
-                            color: MyColor.getTextColor()),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedPriority = value);
-                  },
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                      color: MyColor.primaryColor),
+                  dropdownColor: MyColor.textFieldColor,
+                  items: _priorityList
+                      .map((p) => DropdownMenuItem(
+                          value: p, child: Text(p, style: mulishSemiBold)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedPriority = v!),
                 ),
               ),
             ),
@@ -121,7 +184,6 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
               controller: _messageController,
               focusNode: _messageFocusNode,
               maxLines: 6,
-              isPassword: false,
               onChanged: null,
             ),
 
@@ -131,17 +193,7 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
             LabelText(text: MyStrings.attachments.tr),
             const SizedBox(height: 8),
             InkWell(
-              onTap: () {
-                if (_attachments.length < 5) {
-                  _addDummyAttachment(); // Simulate file pick
-                } else {
-                  CustomSnackbar.showCustomSnackbar(
-                    errorList: [MyStrings.attactmentError],
-                    msg: [],
-                    isError: true,
-                  );
-                }
-              },
+              onTap: _addDummyAttachment,
               child: CustomTextField(
                 hintText: MyStrings.upload.tr,
                 isEnabled: false,
@@ -151,26 +203,20 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: MyColor.primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    MyStrings.upload.tr,
-                    style: mulishSemiBold.copyWith(
-                        color: Colors.white, fontSize: 13),
-                  ),
+                      color: MyColor.primaryColor,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Text(MyStrings.upload.tr,
+                      style: mulishSemiBold.copyWith(
+                          color: Colors.white, fontSize: 13)),
                 ),
                 onChanged: null,
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              MyStrings.supportedFileHint,
-              style: mulishRegular.copyWith(
-                  color: MyColor.bodyTextColor, fontSize: 12),
-            ),
+            Text(MyStrings.supportedFileHint,
+                style: mulishRegular.copyWith(
+                    color: MyColor.bodyTextColor, fontSize: 12)),
 
-            // Attached Files Preview
             if (_attachments.isNotEmpty) ...[
               const SizedBox(height: 16),
               SizedBox(
@@ -178,8 +224,8 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _attachments.length,
-                  itemBuilder: (context, index) {
-                    final file = _attachments[index];
+                  itemBuilder: (_, i) {
+                    final file = _attachments[i];
                     return Stack(
                       children: [
                         Container(
@@ -187,19 +233,14 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
                           height: 80,
                           margin: const EdgeInsets.only(right: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: MyColor.borderColor),
-                          ),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: MyColor.borderColor)),
                           child: Center(
                             child: SvgPicture.asset(
-                              file["type"] == "image"
+                              file["type"] == "pdf"
                                   ? MyIcons.pdfFile
-                                  : file["type"] == "pdf"
-                                      ? MyIcons.pdfFile
-                                      : file["type"] == "doc"
-                                          ? MyIcons.doc
-                                          : MyIcons.xlsx,
+                                  : MyIcons.doc,
                               height: 40,
                               width: 40,
                             ),
@@ -210,7 +251,7 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
                           right: 8,
                           child: CircleIconButton(
                             onTap: () =>
-                                setState(() => _attachments.removeAt(index)),
+                                setState(() => _attachments.removeAt(i)),
                             height: 24,
                             width: 24,
                             backgroundColor: MyColor.closeRedColor,
@@ -225,51 +266,43 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
               ),
             ],
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 50),
 
-            // Submit Button
+            // BEAUTIFUL SUBMIT BUTTON WITHOUT RoundedButton
             Center(
-              child: RoundedButton(
-                text: MyStrings.submit.tr,
-                press: () {
-                  if (_subjectController.text.isEmpty ||
-                      _messageController.text.isEmpty) {
-                    CustomSnackbar.showCustomSnackbar(
-                      errorList: [MyStrings.pleaseFillOutTheField],
-                      msg: [],
-                      isError: true,
-                    );
-                  } else {
-                    _showSuccess();
-                  }
-                },
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : () => _submitTicket(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MyColor.primaryColor,
+                    disabledBackgroundColor:
+                        MyColor.primaryColor.withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 4,
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          MyStrings.submit.tr,
+                          style: mulishSemiBold.copyWith(
+                              color: Colors.white, fontSize: 16),
+                        ),
+                ),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
           ],
         ),
       ),
-    );
-  }
-
-  // Simulate file attachment (for demo)
-  void _addDummyAttachment() {
-    final types = ["image", "pdf", "doc", "xlsx"];
-    final names = ["screenshot.jpg", "invoice.pdf", "report.docx", "data.xlsx"];
-    final random = DateTime.now().millisecondsSinceEpoch % 4;
-
-    setState(() {
-      _attachments.add({
-        "name": names[random],
-        "type": types[random],
-      });
-    });
-
-    CustomSnackbar.showCustomSnackbar(
-      errorList: [],
-      msg: ["${names[random]} attached"],
-      isError: false,
     );
   }
 }

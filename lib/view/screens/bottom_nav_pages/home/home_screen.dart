@@ -405,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   label: const Text(
                     "Watch Now",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                    style: TextStyle(fontSize: 15, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: MyColor.primaryColor,
@@ -430,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen>
                 style: mulishBold.copyWith(color: Colors.white, fontSize: 19)),
             GestureDetector(
               onTap: () => _navigateWithAuthCheck(route),
-              child: Text("See All >",
+              child: Text("See All ",
                   style: mulishSemiBold.copyWith(
                       color: MyColor.primaryColor, fontSize: 14)),
             ),

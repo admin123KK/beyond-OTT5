@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
+import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 
 class AllLiveTvScreen extends StatefulWidget {
   const AllLiveTvScreen({super.key});
@@ -118,14 +120,17 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text("All Live TV", style: TextStyle(color: Colors.white)),
+      // appBar: AppBar(
+      //   backgroundColor: Colors.transparent,
+      //   elevation: 0,
+      //   leading: IconButton(
+      //     icon: const Icon(Icons.arrow_back, color: Colors.white),
+      //     onPressed: () => Get.back(),
+      //   ),
+      //   title: Text(MyStrings.allTV, style: TextStyle(color: Colors.white)),
+      // ),
+      appBar: CustomAppBar(
+        title: MyStrings.allTV,
       ),
       body: isLoading
           ? const Center(
