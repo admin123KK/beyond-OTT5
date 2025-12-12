@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -297,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Text("No Featured Content",
                         style: TextStyle(color: Colors.white38))))
             : AspectRatio(
-                aspectRatio: 0.85,
+                aspectRatio: 1.1,
                 child: Stack(
                   children: [
                     PageView.builder(
