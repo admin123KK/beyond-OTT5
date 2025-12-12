@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/core/utils/my_color.dart';
-import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 import 'package:video_player/video_player.dart';
 
 class LiveTvDetailsScreen extends StatefulWidget {
@@ -75,14 +74,22 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
   }
 
   void updateChannelData(dynamic channel) {
+    final String? imagePath = channel['image'];
+
+    // DIRECT & SAFE PATH — NEVER DEPENDS ON ImageUrlHelper
+    final String safePosterUrl = imagePath == null ||
+            imagePath.isEmpty ||
+            imagePath == 'null'
+        ? "https://via.placeholder.com/800x450/1E1E1E/FFFFFF?text=No+Image"
+        : imagePath.startsWith('http')
+            ? imagePath
+            : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
+
     setState(() {
       currentChannelId = channel['id'];
       title = channel['title']?.toString() ?? "Live TV";
       description = channel['description']?.toString() ?? "Live streaming now";
-
-      // Uses the same dynamic base URL as HomeScreen
-      posterUrl = ImageUrlHelper.tv(channel['image']);
-
+      posterUrl = safePosterUrl;
       isLoading = false;
     });
   }
@@ -167,6 +174,8 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                     fit: BoxFit.cover,
                     color: Colors.black.withOpacity(0.6),
                     colorBlendMode: BlendMode.dstATop,
+                    memCacheHeight: 600,
+                    memCacheWidth: 1080,
                   ),
                 ),
 
@@ -204,9 +213,6 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                                   description,
                                   style: const TextStyle(
                                       color: Colors.white70, fontSize: 16),
-                                ),
-                                const SizedBox(
-                                  height: 20,
                                 ),
                               ],
                             ),
@@ -257,8 +263,8 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
 
           // Channel Info
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -268,38 +274,22 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                       fontSize: 26,
                       fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-
-          const Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: const Row(
-              children: [
+                const SizedBox(height: 12),
                 Text(
                   'Channel Description',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(
-            height: 5,
-          ),
-          Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
+                const SizedBox(height: 8),
+                Text(
                   description,
                   style: const TextStyle(
                       color: Colors.white70, fontSize: 14, height: 1.5),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           const Divider(height: 1, color: MyColor.bodyTextColor),
@@ -331,6 +321,16 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                             final channel = allChannels[index];
                             final isActive = channel['id'] == currentChannelId;
 
+                            // SAFE IMAGE URL — SAME FIX AS HOME
+                            final String? imagePath = channel['image'];
+                            final String channelImageUrl = imagePath == null ||
+                                    imagePath.isEmpty ||
+                                    imagePath == 'null'
+                                ? "https://via.placeholder.com/300/1E1E1E/FFFFFF?text=TV"
+                                : imagePath.startsWith('http')
+                                    ? imagePath
+                                    : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
+
                             return GestureDetector(
                               onTap: () => switchChannel(channel),
                               child: Container(
@@ -360,11 +360,12 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(11),
                                       child: CachedNetworkImage(
-                                        imageUrl:
-                                            ImageUrlHelper.tv(channel['image']),
+                                        imageUrl: channelImageUrl,
                                         height: 80,
                                         width: 84,
                                         fit: BoxFit.cover,
+                                        memCacheHeight: 300,
+                                        memCacheWidth: 300,
                                         placeholder: (_, __) => Container(
                                           color: Colors.grey[800],
                                           child: const Icon(Icons.live_tv,

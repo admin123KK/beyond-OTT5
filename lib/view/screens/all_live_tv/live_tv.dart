@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -7,7 +8,6 @@ import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
-import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 
 class AllLiveTvScreen extends StatefulWidget {
   const AllLiveTvScreen({super.key});
@@ -21,7 +21,7 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
   bool isLoading = true;
 
   // Update based on user subscription
-  final List<int> subscribedChannelIds = [1, 2]; // Kantipur & Test
+  final List<int> subscribedChannelIds = [1, 2]; // Kantipur & Test (example)
 
   @override
   void initState() {
@@ -199,6 +199,16 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
               final String name = ch['title'] ?? "Channel";
               final bool isKantipur = name.toLowerCase().contains("kanti");
 
+              // FIXED IMAGE URL — DIRECT PATH, NO ImageUrlHelper
+              final String? imagePath = ch['image'];
+              final String imageUrl = imagePath == null ||
+                      imagePath.isEmpty ||
+                      imagePath == 'null'
+                  ? "https://via.placeholder.com/300/1E1E1E/FFFFFF?text=TV"
+                  : imagePath.startsWith('http')
+                      ? imagePath
+                      : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
+
               return GestureDetector(
                 onTap: () => isSubscribed
                     ? Get.toNamed(RouteHelper.liveTvDetailsScreen,
@@ -220,36 +230,26 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Channel Logo
+                          // Channel Logo — FIXED
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: CachedNetworkImage(
-                              imageUrl: ImageUrlHelper.tv(ch['image']),
+                              imageUrl: imageUrl,
                               height: 80,
                               width: 80,
                               fit: BoxFit.contain,
+                              memCacheHeight: 300,
+                              memCacheWidth: 300,
                               placeholder: (_, __) => Container(
                                   color: Colors.grey[300],
-                                  child: const Icon(Icons.live_tv, size: 40)),
+                                  child: const Icon(Icons.live_tv,
+                                      size: 40, color: Colors.grey)),
                               errorWidget: (_, __, ___) => Container(
                                   color: Colors.grey[300],
-                                  child: const Icon(Icons.live_tv, size: 40)),
+                                  child: const Icon(Icons.live_tv,
+                                      size: 40, color: Colors.grey)),
                             ),
                           ),
-                          // const SizedBox(height: 12),
-                          // Text(
-                          //   name,
-                          //   style: TextStyle(
-                          //     color: isKantipur
-                          //         ? const Color(0xFF00A0E3)
-                          //         : Colors.black87,
-                          //     fontSize: 13,
-                          //     fontWeight: FontWeight.bold,
-                          //   ),
-                          //   textAlign: TextAlign.center,
-                          //   maxLines: 2,
-                          //   overflow: TextOverflow.ellipsis,
-                          // ),
                         ],
                       ),
 

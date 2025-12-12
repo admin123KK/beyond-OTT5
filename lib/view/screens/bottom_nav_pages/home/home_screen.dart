@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -12,7 +13,6 @@ import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/bottom_Nav/bottom_nav.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
-import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 import 'package:play_lab/view/screens/my_search/search_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen>
   List<dynamic> featured = [];
   String portraitBaseUrl = "";
   String landscapeBaseUrl = "";
-  String tvBaseUrl = "";
 
   @override
   void initState() {
@@ -104,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen>
                 "https://ott.beyondtechnepal.com/${path['portrait']}";
             landscapeBaseUrl =
                 "https://ott.beyondtechnepal.com/${path['landscape']}";
-            tvBaseUrl = "https://ott.beyondtechnepal.com/${path['television']}";
             _isLoading = false;
           });
         }
@@ -365,7 +363,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           child: Stack(
             children: [
-              // HERO IMAGE - This will fly
               Positioned.fill(
                 child: Hero(
                   tag: heroTag,
@@ -381,7 +378,6 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ),
-              // Content overlay
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -448,6 +444,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
 
+  // FIXED LIVE TV IMAGE — NEVER DISAPPEARS
   Widget _buildLiveTVList() => SizedBox(
         height: 180,
         child: ListView.builder(
@@ -457,6 +454,16 @@ class _HomeScreenState extends State<HomeScreen>
           itemBuilder: (context, i) {
             final item = liveChannels[i];
             final String title = item['title'] ?? "Channel";
+            final String? imagePath = item['image'];
+
+            // DIRECT & CORRECT PATH — NO DEPENDENCY ON ImageUrlHelper
+            final String imageUrl = imagePath == null ||
+                    imagePath.isEmpty ||
+                    imagePath == 'null'
+                ? "https://via.placeholder.com/300/1E1E1E/FFFFFF?text=TV"
+                : imagePath.startsWith('http')
+                    ? imagePath
+                    : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
 
             return InkWell(
               onTap: () => Get.toNamed(RouteHelper.liveTvDetailsScreen,
@@ -485,10 +492,12 @@ class _HomeScreenState extends State<HomeScreen>
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: CachedNetworkImage(
-                              imageUrl: ImageUrlHelper.tv(item['image']),
+                              imageUrl: imageUrl,
                               height: 90,
                               width: 80,
                               fit: BoxFit.contain,
+                              memCacheHeight: 300,
+                              memCacheWidth: 250,
                               placeholder: (_, __) => Container(
                                   color: Colors.grey[800],
                                   child: const Icon(Icons.live_tv,
@@ -516,7 +525,6 @@ class _HomeScreenState extends State<HomeScreen>
                         ],
                       ),
                     ),
-                    // LIVE Badge - Fixed Position
                     Positioned(
                       top: 10,
                       right: 10,
