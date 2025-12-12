@@ -1,7 +1,7 @@
-// navigation_drawer_widget.dart
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
@@ -71,6 +71,54 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
     }
   }
 
+  // PRODUCTION-READY LOGOUT FUNCTION
+  Future<void> _performLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      // No token — just clear and go to login
+      await prefs.clear();
+      Get.offAllNamed(RouteHelper.loginScreen);
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants
+            .logoutEndpoint), // Make sure this is defined in your ApiConstants
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        if (json['remark'] == 'logout_success' || json['status'] == 'success') {
+          Get.snackbar(
+            "Success",
+            json['message']['success'][0] ?? "Logout Successful",
+            backgroundColor: MyColor.primaryColor,
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+      // Proceed to clear data even if API fails (security first)
+    } catch (e) {
+      debugPrint("Logout API error: $e");
+      // Optional: Show error snackbar
+      // Get.snackbar("Error", "Logout failed, but local session cleared");
+    } finally {
+      // Always clear local data and navigate to login
+      await prefs
+          .clear(); // or prefs.remove('access_token'), prefs.remove('user_id'), etc.
+      Get.offAllNamed(RouteHelper.loginScreen);
+    }
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -94,15 +142,14 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Get.back(),
-              child: Text("Cancel",
-                  style: mulishSemiBold.copyWith(color: Colors.white70))),
+            onPressed: () => Get.back(),
+            child: Text("Cancel",
+                style: mulishSemiBold.copyWith(color: Colors.white70)),
+          ),
           ElevatedButton(
             onPressed: () async {
-              Get.back();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // or remove only token
-              Get.offAllNamed(RouteHelper.loginScreen);
+              Get.back(); // Close dialog
+              await _performLogout(); // Call the proper logout function
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: MyColor.primaryColor),
@@ -114,10 +161,11 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
     );
   }
 
-  Widget _buildDrawerItem(
-      {required IconData icon,
-      required String title,
-      required VoidCallback onTap}) {
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       leading: Icon(icon, color: Colors.white70, size: 26),
@@ -141,7 +189,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
       backgroundColor: const Color(0xFF1E1E2A),
       child: Column(
         children: [
-          // Header
+          // Header (unchanged)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
@@ -176,8 +224,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
                                   width: 100,
                                   height: 20,
                                   child: LinearProgressIndicator(
-                                      color: MyColor.primaryColor),
-                                )
+                                      color: MyColor.primaryColor))
                               : Text(
                                   fullName.isEmpty ? "Guest User" : fullName,
                                   style: mulishSemiBold.copyWith(
@@ -266,7 +313,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
             ),
           ),
 
-          // Logout Button
+          // LOGOUT BUTTON — CALLS API + CLEARS DATA
           Padding(
             padding: const EdgeInsets.all(20),
             child: SizedBox(

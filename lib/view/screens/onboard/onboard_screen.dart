@@ -125,7 +125,6 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                         ],
                       )
                     else
-                      // Middle Pages → Dots + Next
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

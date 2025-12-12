@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -270,11 +272,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _checkVerificationStatus(token, email);
       } else {
         String error =
-            jsonResponse['message']?['error']?[0] ?? "Google login failed";
+            jsonResponse['message']?['error']?[0] ?? "$e Google login failed";
         _showErrorDialog(error);
       }
     } catch (e) {
-      _showErrorDialog("Google Sign-In failed. Try again.");
+      _showErrorDialog("$e Google Sign-In failed. Try again.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
