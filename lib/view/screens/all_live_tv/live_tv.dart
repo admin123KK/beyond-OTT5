@@ -1,5 +1,8 @@
+// lib/view/screens/live_tv/all_live_tv_screen.dart
+
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +10,7 @@ import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
+import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 
 class AllLiveTvScreen extends StatefulWidget {
   const AllLiveTvScreen({super.key});
@@ -19,7 +23,7 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
   List<dynamic> channels = [];
   bool isLoading = true;
 
-  // Only these channels are subscribed (Premium)
+  // Update based on user subscription
   final List<int> subscribedChannelIds = [1, 2]; // Kantipur & Test
 
   @override
@@ -30,10 +34,11 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
 
   Future<void> fetchChannels() async {
     try {
+      setState(() => isLoading = true);
       final res = await http.get(
         Uri.parse("https://ott.beyondtechnepal.com/api/live-television/all"),
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200) {
         final json = jsonDecode(res.body);
@@ -53,61 +58,37 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
         backgroundColor: Colors.grey.shade900,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_outline, color: Colors.pink, size: 60),
+              const Icon(Icons.lock_open, color: Colors.pinkAccent, size: 70),
               const SizedBox(height: 20),
-              const Text(
-                "Subscribe Now to Unlock",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
+              const Text("Unlock Premium Channels",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              const Text(
-                "Get access to premium sports channels and more!",
-                style: TextStyle(color: Colors.white70, fontSize: 15),
-                textAlign: TextAlign.center,
-              ),
+              const Text("Subscribe to watch all premium live TV channels",
+                  style: TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Get.back(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade700,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                      ),
-                      child: const Text("Cancel",
-                          style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.snackbar("Info", "Subscription coming soon!",
-                            backgroundColor: MyColor.primaryColor);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: MyColor.primaryColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                      ),
-                      child: const Text("Subscribe Now",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  Get.toNamed(RouteHelper.subscribeScreen);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyColor.primaryColor,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                ),
+                child: const Text("Subscribe Now",
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ],
           ),
@@ -118,59 +99,68 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final premiumChannels =
+        channels.where((c) => subscribedChannelIds.contains(c['id'])).toList();
+    final sportsChannels =
+        channels.where((c) => !subscribedChannelIds.contains(c['id'])).toList();
+
     return Scaffold(
       backgroundColor: Colors.black,
-      // appBar: AppBar(
-      //   backgroundColor: Colors.transparent,
-      //   elevation: 0,
-      //   leading: IconButton(
-      //     icon: const Icon(Icons.arrow_back, color: Colors.white),
-      //     onPressed: () => Get.back(),
-      //   ),
-      //   title: Text(MyStrings.allTV, style: TextStyle(color: Colors.white)),
-      // ),
-      appBar: CustomAppBar(
-        title: MyStrings.allTV,
-      ),
+      appBar: CustomAppBar(title: MyStrings.allTV),
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: MyColor.primaryColor))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Premium Channels (Subscribed - No Dialog)
-                  _buildPack(
-                    title: "Premium Channels",
-                    channels: channels,
-                    isPremium: true,
-                  ),
-                  const SizedBox(height: 30),
+          : RefreshIndicator(
+              onRefresh: fetchChannels,
+              color: MyColor.primaryColor,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Premium Channels
+                    if (premiumChannels.isNotEmpty)
+                      _buildSection(
+                        title: "Premium Channels",
+                        badgeText: "Subscribed",
+                        badgeColor: const Color(0xFF9C27B0), // Purple
+                        channels: premiumChannels,
+                        isSubscribed: true,
+                      ),
 
-                  // Sports Pack (Locked - SHOW DIALOG)
-                  _buildPack(
-                    title: "Sports Pack Channels",
-                    channels: channels,
-                    isPremium: false,
-                  ),
-                  const SizedBox(height: 100),
-                ],
+                    const SizedBox(height: 24),
+
+                    // Sports Pack
+                    if (sportsChannels.isNotEmpty)
+                      _buildSection(
+                        title: "Sports Pack Channels",
+                        badgeText: "Subscribe Now",
+                        badgeColor: const Color(0xFFE91E63), // Pink
+                        channels: sportsChannels,
+                        isSubscribed: false,
+                      ),
+
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
     );
   }
 
-  Widget _buildPack({
+  Widget _buildSection({
     required String title,
+    required String badgeText,
+    required Color badgeColor,
     required List<dynamic> channels,
-    required bool isPremium,
+    required bool isSubscribed,
   }) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade900.withOpacity(0.7),
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade800),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,27 +168,21 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isPremium ? Colors.purple.shade700 : Colors.pink,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  isPremium ? "Subscribed" : "Subscribe Now",
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                ),
+                    color: badgeColor, borderRadius: BorderRadius.circular(30)),
+                child: Text(badgeText,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -208,62 +192,102 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
             itemCount: channels.length,
             itemBuilder: (ctx, i) {
               final ch = channels[i];
-              final int id = ch['id'];
-              final bool isSubscribed = subscribedChannelIds.contains(id);
-
-              // Premium Pack: play if subscribed
-              // Sports Pack: show dialog if not subscribed
-              final bool canPlay = isPremium ? isSubscribed : false;
+              final String name = ch['title'] ?? "Channel";
+              final bool isKantipur = name.toLowerCase().contains("kanti");
 
               return GestureDetector(
-                onTap: () {
-                  if (canPlay) {
-                    Get.toNamed(RouteHelper.liveTvDetailsScreen, arguments: id);
-                  } else {
-                    _showSubscribeDialog(); // Only for Sports Pack
-                  }
-                },
+                onTap: () => isSubscribed
+                    ? Get.toNamed(RouteHelper.liveTvDetailsScreen,
+                        arguments: ch['id'])
+                    : _showSubscribeDialog(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade800,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4)),
+                      ]),
+                  padding: const EdgeInsets.all(9),
                   child: Stack(
                     children: [
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            canPlay ? Icons.live_tv : Icons.lock,
-                            color: canPlay ? Colors.white70 : Colors.grey,
-                            size: 40,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            ch['title'] ?? "Channel",
-                            style: TextStyle(
-                              color:
-                                  canPlay ? Colors.white : Colors.grey.shade600,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                          // Channel Logo
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: CachedNetworkImage(
+                              imageUrl: ImageUrlHelper.tv(ch['image']),
+                              height: 80,
+                              width: 80,
+                              fit: BoxFit.contain,
+                              placeholder: (_, __) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.live_tv, size: 40)),
+                              errorWidget: (_, __, ___) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.live_tv, size: 40)),
                             ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
                           ),
+                          // const SizedBox(height: 12),
+                          // Text(
+                          //   name,
+                          //   style: TextStyle(
+                          //     color: isKantipur
+                          //         ? const Color(0xFF00A0E3)
+                          //         : Colors.black87,
+                          //     fontSize: 13,
+                          //     fontWeight: FontWeight.bold,
+                          //   ),
+                          //   textAlign: TextAlign.center,
+                          //   maxLines: 2,
+                          //   overflow: TextOverflow.ellipsis,
+                          // ),
                         ],
                       ),
-                      if (!canPlay)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(16),
+
+                      // HD Badge
+                      if (name.toLowerCase().contains("kanti") ||
+                          name.toLowerCase().contains("test"))
+                        Positioned(
+                          top: 0,
+                          right: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade600,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text("HD",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+
+                      // Lock Icon for unsubscribed
+                      if (!isSubscribed)
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                                color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.lock,
+                                color: Colors.white, size: 18),
                           ),
                         ),
                     ],

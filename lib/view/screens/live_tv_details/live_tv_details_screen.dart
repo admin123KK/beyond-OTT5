@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
@@ -235,11 +234,11 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
 
               // LIVE Badge
               Positioned(
-                top: 70,
+                top: 25,
                 left: 20,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                   decoration: BoxDecoration(
                     color: MyColor.primaryColor,
                     borderRadius: BorderRadius.circular(30),

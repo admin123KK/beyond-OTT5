@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
+import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 import 'package:video_player/video_player.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
@@ -17,19 +20,25 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool isLoading = true;
   Map<String, dynamic>? movie;
   String baseUrl = ApiConstants.baseUrl;
-  String portraitPath = "";
-  String landscapePath = "";
-  bool showMore = false;
-
-  // Trailer variables
   String trailerVideoUrl = "";
   bool isTrailerLoading = true;
   String trailerError = "";
+  bool showMore = false;
+
+  late String heroTag;
+  late String heroImageUrl;
 
   @override
   void initState() {
     super.initState();
-    fetchMovieBySlug("final-destination-bloodlines-1905081321l5lpk");
+
+    final args = Get.arguments as Map<String, dynamic>? ?? {};
+    final String slug =
+        args['slug'] ?? Get.arguments as String? ?? "default-slug";
+    heroTag = args['heroTag'] ?? 'default_hero_tag';
+    heroImageUrl = args['imageUrl'] ?? '';
+
+    fetchMovieBySlug(slug);
   }
 
   Future<void> fetchMovieBySlug(String slug) async {
@@ -39,20 +48,31 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       if (res.statusCode == 200) {
         final json = jsonDecode(res.body);
         final List movies = json['data']['movies']['data'];
-
         final found =
             movies.firstWhere((m) => m['slug'] == slug, orElse: () => null);
 
         if (found != null) {
-          setState(() {
-            movie = found;
-            portraitPath = json['data']['portrait_path'] ?? "";
-            landscapePath = json['data']['landscape_path'] ?? "";
-            isLoading = false;
-          });
+          setState(() => movie = found);
 
-          // Extract trailer path and fetch real video
-          final trailerPath = json['data']['trailer']?['path'] ?? "";
+          final pathData = json['data'];
+          ImageUrlHelper.init(
+            pathData['portrait_path'] ?? pathData['portrait'] ?? '',
+            pathData['landscape_path'] ?? pathData['landscape'] ?? '',
+            pathData['television'] ?? '',
+          );
+
+          if (heroImageUrl.isEmpty) {
+            final imgPath = movie?['image']?['landscape'] ??
+                movie?['image']?['portrait'] ??
+                '';
+            heroImageUrl = imgPath.startsWith('http')
+                ? imgPath
+                : imgPath.isNotEmpty
+                    ? "${ImageUrlHelper.landscape}$imgPath"
+                    : "https://via.placeholder.com/800x1200";
+          }
+
+          final trailerPath = pathData['trailer']?['path'] ?? "";
           if (trailerPath.isNotEmpty) {
             fetchTrailerVideo(trailerPath);
           } else {
@@ -61,7 +81,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
               isTrailerLoading = false;
             });
           }
-        } else {
+
           setState(() => isLoading = false);
         }
       }
@@ -70,45 +90,30 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     }
   }
 
-  // Fetch real trailer video from the "path"
   Future<void> fetchTrailerVideo(String pathUrl) async {
     setState(() {
       isTrailerLoading = true;
       trailerError = "";
     });
-
     try {
       final response = await http.get(Uri.parse(pathUrl));
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         final List trailers = json['data'] ?? [];
-
         if (trailers.isNotEmpty) {
           final videoPath = trailers[0]['video'] ?? "";
-          if (videoPath.isNotEmpty) {
-            setState(() {
-              trailerVideoUrl = videoPath.startsWith('http')
-                  ? videoPath
-                  : "$baseUrl/$videoPath".replaceAll('//', '/');
-              isTrailerLoading = false;
-            });
-          } else {
-            setState(() {
-              trailerError = "Trailer video not found";
-              isTrailerLoading = false;
-            });
-          }
+          setState(() {
+            trailerVideoUrl = videoPath.startsWith('http')
+                ? videoPath
+                : "$baseUrl/$videoPath".replaceAll('//', '/');
+            isTrailerLoading = false;
+          });
         } else {
           setState(() {
             trailerError = "No trailer found";
             isTrailerLoading = false;
           });
         }
-      } else {
-        setState(() {
-          trailerError = "Failed to load trailer";
-          isTrailerLoading = false;
-        });
       }
     } catch (e) {
       setState(() {
@@ -117,11 +122,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       });
     }
   }
-
-  String get poster => movie?['image']?['landscape'] == null
-      ? ""
-      : "$baseUrl/$landscapePath${movie!['image']['landscape']}"
-          .replaceAll('//', '/');
 
   String get title => movie?['title'] ?? "Movie Title";
   String get preview => movie?['preview_text'] ?? "";
@@ -138,7 +138,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.pink)),
+        body: Center(
+            child: CircularProgressIndicator(color: MyColor.primaryColor)),
       );
     }
 
@@ -146,177 +147,198 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-            child: Text("Movie not found",
-                style: TextStyle(color: Colors.white, fontSize: 24))),
+          child: Text("Movie not found",
+              style: TextStyle(color: Colors.white, fontSize: 24)),
+        ),
       );
     }
 
+    final double backdropHeight =
+        MediaQuery.of(context).size.height * 0.50; // 50%
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: MediaQuery.of(context).size.height * 0.58,
-            pinned: true,
-            backgroundColor: Colors.black,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Get.back(),
+      body: Stack(
+        children: [
+          // HERO BACKDROP (50% height)
+          Hero(
+            tag: heroTag,
+            transitionOnUserGestures: true,
+            child: CachedNetworkImage(
+              imageUrl: heroImageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: backdropHeight + MediaQuery.of(context).padding.top,
+              placeholder: (_, __) => Container(color: Colors.grey[900]),
+              errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  poster.isNotEmpty
-                      ? Image.network(poster, fit: BoxFit.cover)
-                      : Container(color: Colors.grey[900]),
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black],
-                      ),
-                    ),
-                  ),
-                ],
+          ),
+
+          // Gradient overlay
+          Container(
+            height: backdropHeight + MediaQuery.of(context).padding.top,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black],
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 38,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                  const SizedBox(height: 12),
 
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(30)),
-                    child: const Text("New Release",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(height: 12),
+          // Back button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 16,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios,
+                  color: Colors.white, size: 28),
+              onPressed: () => Get.back,
+            ),
+          ),
 
-                  Text("Released in 2025 • $genre",
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 16),
+          // Main scrollable content
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Space for backdrop
+                SizedBox(height: backdropHeight),
 
-                  Text(
-                    preview.isNotEmpty ? preview : desc,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 17, height: 1.5),
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 20),
-
-                  GestureDetector(
-                    onTap: () => setState(() => showMore = !showMore),
-                    child: Row(
-                      children: [
-                        Text(showMore ? "Show Less" : "View More",
+                // Content starts here
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: MyColor.primaryColor,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text("New Release",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 12),
+                      Text("Released in 2025 • $genre",
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16)),
+                      const SizedBox(height: 16),
+                      Text(
+                        preview.isNotEmpty ? preview : desc,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 17, height: 1.5),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: () => setState(() => showMore = !showMore),
+                        child: Row(
+                          children: [
+                            Text(showMore ? "Show Less" : "View More",
+                                style: const TextStyle(
+                                    color: Colors.pinkAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 17)),
+                            Icon(
+                                showMore
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: Colors.pinkAccent),
+                          ],
+                        ),
+                      ),
+                      if (showMore) ...[
+                        const SizedBox(height: 24),
+                        Text(desc,
                             style: const TextStyle(
-                                color: Colors.pinkAccent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17)),
-                        Icon(
-                            showMore
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            color: Colors.pinkAccent),
+                                color: Colors.white70,
+                                fontSize: 16,
+                                height: 1.6)),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                              color: Colors.grey[900],
+                              borderRadius: BorderRadius.circular(16)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Cast & Crew",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 12),
+                                _info("Director", director),
+                                _info("Producer", producer),
+                                _info("Cast", casts),
+                              ]),
+                        ),
                       ],
-                    ),
-                  ),
-
-                  if (showMore) ...[
-                    const SizedBox(height: 24),
-                    Text(desc,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 16, height: 1.6)),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                          color: Colors.grey[900],
-                          borderRadius: BorderRadius.circular(16)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Cast & Crew",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-                          _info("Director", director),
-                          _info("Producer", producer),
-                          _info("Cast", casts),
-                        ],
+                      const SizedBox(height: 35),
+                      SizedBox(
+                        height: 60,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Get.toNamed('/moviepurchase-screen', arguments: {
+                              'title': title,
+                              'coverImage': heroImageUrl,
+                              'price': double.tryParse(rentPrice) ?? 325.0,
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MyColor.primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: Text(
+                            isFree
+                                ? "Watch Free"
+                                : "Buy Now @ NRS. ${double.parse(rentPrice).toStringAsFixed(0)}/- (24 hour)",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 40),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.toNamed('/moviepurchase-screen', arguments: {
-                          'title': title,
-                          'coverImage': poster,
-                          'price': double.tryParse(rentPrice) ?? 325.0,
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pink,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 40),
+                      const Text("Movie Official Trailer",
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 220,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.grey[900]),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: _buildTrailerWidget(),
+                        ),
                       ),
-                      child: Text(
-                        isFree
-                            ? "Watch Free"
-                            : "Buy Now @ NRS. ${double.parse(rentPrice).toStringAsFixed(0)}/- (24 hour)",
-                        style: const TextStyle(
-                            fontSize: 19, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                      const SizedBox(height: 100),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-
-                  const Text("Movie Official Trailer",
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                  const SizedBox(height: 16),
-
-                  // REAL TRAILER VIDEO PLAYER
-                  Container(
-                    height: 220,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.grey[900]),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: _buildTrailerWidget(),
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -327,49 +349,41 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   Widget _buildTrailerWidget() {
     if (isTrailerLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: Colors.pink),
-      );
+          child: CircularProgressIndicator(color: MyColor.primaryColor));
     }
-
     if (trailerError.isNotEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 50),
-            const SizedBox(height: 10),
-            Text(trailerError, style: const TextStyle(color: Colors.white70)),
-          ],
-        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 50),
+          const SizedBox(height: 10),
+          Text(trailerError, style: const TextStyle(color: Colors.white70)),
+        ]),
       );
     }
-
     if (trailerVideoUrl.isNotEmpty) {
       return Stack(
         children: [
-          Image.network(poster, fit: BoxFit.cover, width: double.infinity),
+          CachedNetworkImage(
+              imageUrl: heroImageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity),
           const Center(
-            child:
-                Icon(Icons.play_circle_fill, size: 80, color: Colors.white70),
-          ),
+              child: Icon(Icons.play_circle_fill,
+                  size: 80, color: Colors.white70)),
           Positioned.fill(
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () {
-                  Get.to(() => FullScreenTrailer(url: trailerVideoUrl));
-                },
-              ),
+                  onTap: () =>
+                      Get.to(() => FullScreenTrailer(url: trailerVideoUrl))),
             ),
           ),
         ],
       );
     }
-
     return const Center(
-      child: Text("No trailer availableee",
-          style: TextStyle(color: Colors.white70)),
-    );
+        child: Text("No trailer available",
+            style: TextStyle(color: Colors.white70)));
   }
 
   Widget _info(String label, String value) {
@@ -391,7 +405,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   }
 }
 
-// Fullscreen trailer page
 class FullScreenTrailer extends StatefulWidget {
   final String url;
   const FullScreenTrailer({Key? key, required this.url}) : super(key: key);
@@ -428,21 +441,16 @@ class _FullScreenTrailerState extends State<FullScreenTrailer> {
         child: _controller.value.isInitialized
             ? AspectRatio(
                 aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : const CircularProgressIndicator(color: Colors.pink),
+                child: VideoPlayer(_controller))
+            : const CircularProgressIndicator(color: MyColor.primaryColor),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.pink,
+        backgroundColor: MyColor.primaryColor,
         child:
             Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
-        onPressed: () {
-          setState(() {
-            _controller.value.isPlaying
-                ? _controller.pause()
-                : _controller.play();
-          });
-        },
+        onPressed: () => setState(() => _controller.value.isPlaying
+            ? _controller.pause()
+            : _controller.play()),
       ),
     );
   }

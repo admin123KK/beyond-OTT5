@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
@@ -12,12 +12,12 @@ import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/bottom_Nav/bottom_nav.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
+import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 import 'package:play_lab/view/screens/my_search/search_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ← ADDED
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -30,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen>
   final PageController _pageController = PageController();
   final TextEditingController _searchController = TextEditingController();
 
-  // API Data
   bool _isLoading = true;
   String? _error;
 
@@ -46,26 +45,21 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-
-    // Auto slider
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (featuredMovies.isEmpty || !_pageController.hasClients) return;
       setState(() {
         _currentPage =
             _currentPage < featuredMovies.length - 1 ? _currentPage + 1 : 0;
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOut,
-        );
+        _pageController.animateToPage(_currentPage,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut);
       });
     });
-
     fetchDashboard();
   }
 
-  // ← NEW: Check login + navigate safely
-  void _navigateWithAuthCheck(String route, {dynamic arguments}) async {
+  void _navigateWithAuthCheck(String route,
+      {Map<String, dynamic>? args}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ??
         prefs.getString('token') ??
@@ -73,18 +67,14 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (token == null || token.isEmpty) {
       Get.toNamed(RouteHelper.loginScreen);
-      Get.snackbar(
-        "Login Required",
-        "Please login to access this content",
-        backgroundColor: Colors.red.withOpacity(0.95),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 3),
-      );
+      Get.snackbar("Login Required", "Please login to access this content",
+          backgroundColor: Colors.red.withOpacity(0.95),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12);
     } else {
-      Get.toNamed(route, arguments: arguments);
+      Get.toNamed(route, arguments: args);
     }
   }
 
@@ -93,26 +83,23 @@ class _HomeScreenState extends State<HomeScreen>
       _isLoading = true;
       _error = null;
     });
-
     try {
-      final response = await http.get(
-        Uri.parse(ApiConstants.deviceDashboardEndpoint),
-        headers: {'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(Uri.parse(ApiConstants.deviceDashboardEndpoint), headers: {
+        'Accept': 'application/json'
+      }).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         if (json['status'] == 'success') {
           final data = json['data']['data'];
           final path = json['data']['path'];
-
           setState(() {
             sliders = data['sliders'] ?? [];
             liveChannels = data['televisions']?['data'] ?? [];
             recentlyAdded = data['recently_added'] ?? [];
             freeZone = data['free_zone'] ?? [];
             featured = data['featured'] ?? [];
-
             portraitBaseUrl =
                 "https://ott.beyondtechnepal.com/${path['portrait']}";
             landscapeBaseUrl =
@@ -120,17 +107,11 @@ class _HomeScreenState extends State<HomeScreen>
             tvBaseUrl = "https://ott.beyondtechnepal.com/${path['television']}";
             _isLoading = false;
           });
-        } else {
-          throw Exception(json['message'] ?? 'Failed to load');
         }
-      } else {
-        throw Exception('Server error: ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
-        _error = e.toString().contains('Timeout')
-            ? 'No internet connection'
-            : 'Something went wrong';
+        _error = 'No internet connection';
         _isLoading = false;
       });
     }
@@ -147,12 +128,11 @@ class _HomeScreenState extends State<HomeScreen>
           : img.startsWith('http')
               ? img
               : "$landscapeBaseUrl$img";
-
       return {
         "title": item['title'] ?? "Untitled",
         "image": url,
         "year": item['created_at']?.substring(0, 4) ?? "2025",
-        "slug": item['slug']?.toString() ?? "",
+        "slug": item['slug']?.toString() ?? ""
       };
     }).toList();
   }
@@ -171,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
     return Scaffold(
       backgroundColor: MyColor.colorBlack,
       drawer: const NavigationDrawerWidget(),
@@ -181,9 +160,25 @@ class _HomeScreenState extends State<HomeScreen>
           onRefresh: fetchDashboard,
           color: MyColor.primaryColor,
           child: _isLoading
-              ? _buildLoading()
+              ? const Center(
+                  child: CircularProgressIndicator(color: MyColor.primaryColor))
               : _error != null
-                  ? _buildError()
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.wifi_off,
+                              size: 80, color: Colors.white38),
+                          const SizedBox(height: 16),
+                          Text(_error!,
+                              style: const TextStyle(color: Colors.white70)),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                              onPressed: fetchDashboard,
+                              child: const Text("Retry")),
+                        ],
+                      ),
+                    )
                   : CustomScrollView(
                       physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics()),
@@ -224,23 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildLoading() => const Center(
-      child: CircularProgressIndicator(color: MyColor.primaryColor));
-
-  Widget _buildError() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.wifi_off, size: 80, color: Colors.white38),
-            const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: Colors.white70)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-                onPressed: fetchDashboard, child: const Text("Retry")),
-          ],
-        ),
-      );
-
+  // ─────────────────────────────── UI WIDGETS ───────────────────────────────
   Widget _buildAppBar() => SliverAppBar(
         backgroundColor: MyColor.colorBlack,
         elevation: 0,
@@ -300,10 +279,6 @@ class _HomeScreenState extends State<HomeScreen>
                                 },
                               ),
                             ),
-                            onSubmitted: (q) => q.trim().isNotEmpty
-                                ? Get.to(
-                                    () => SearchScreen(searchText: q.trim()))
-                                : null,
                           ),
                         )
                       : null,
@@ -329,11 +304,8 @@ class _HomeScreenState extends State<HomeScreen>
                       controller: _pageController,
                       onPageChanged: (i) => setState(() => _currentPage = i),
                       itemCount: featuredMovies.length,
-                      itemBuilder: (_, i) {
-                        final m = featuredMovies[i];
-                        return _buildFeaturedItem(
-                            m["image"]!, m["title"]!, m["year"]!, m["slug"]!);
-                      },
+                      itemBuilder: (_, i) =>
+                          _buildFeaturedItem(featuredMovies[i]),
                     ),
                     Positioned(
                       bottom: 20,
@@ -349,10 +321,11 @@ class _HomeScreenState extends State<HomeScreen>
                             width: _currentPage == i ? 28 : 10,
                             height: 8,
                             decoration: BoxDecoration(
-                                color: _currentPage == i
-                                    ? MyColor.primaryColor
-                                    : Colors.white54,
-                                borderRadius: BorderRadius.circular(4)),
+                              color: _currentPage == i
+                                  ? MyColor.primaryColor
+                                  : Colors.white54,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           ),
                         ),
                       ),
@@ -362,65 +335,102 @@ class _HomeScreenState extends State<HomeScreen>
               ),
       );
 
-  Widget _buildFeaturedItem(
-          String img, String title, String year, String slug) =>
-      InkWell(
-        onTap: () => _navigateWithAuthCheck(RouteHelper.movieDetailsScreen,
-            arguments: slug),
+  Widget _buildFeaturedItem(Map<String, dynamic> movie) {
+    final String img = movie["image"];
+    final String title = movie["title"];
+    final String year = movie["year"];
+    final String slug = movie["slug"];
+    final String heroTag = "featured_hero_$slug";
+
+    return InkWell(
+      onTap: () => _navigateWithAuthCheck(
+        RouteHelper.movieDetailsScreen,
+        args: {
+          'slug': slug,
+          'heroTag': heroTag,
+          'imageUrl': img,
+        },
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(image: NetworkImage(img), fit: BoxFit.cover),
+        ),
         child: Container(
-          decoration: BoxDecoration(
-              image:
-                  DecorationImage(image: NetworkImage(img), fit: BoxFit.cover)),
-          child: Container(
-            decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black87])),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(blurRadius: 10, color: Colors.black)
-                        ])),
-                Text("$year • Tap to Watch",
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _navigateWithAuthCheck(
-                      RouteHelper.movieDetailsScreen,
-                      arguments: slug),
-                  icon: const Icon(
-                    Icons.play_arrow,
-                    size: 28,
-                    color: Colors.white,
-                  ),
-                  label: const Text(
-                    "Watch Now",
-                    style: TextStyle(fontSize: 15, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: MyColor.primaryColor,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30))),
-                ),
-              ],
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black87],
             ),
           ),
+          child: Stack(
+            children: [
+              // HERO IMAGE - This will fly
+              Positioned.fill(
+                child: Hero(
+                  tag: heroTag,
+                  transitionOnUserGestures: true,
+                  child: Image.network(
+                    img,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : Container(color: Colors.grey[900]),
+                    errorBuilder: (_, __, ___) =>
+                        Container(color: Colors.grey[900]),
+                  ),
+                ),
+              ),
+              // Content overlay
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black)
+                            ])),
+                    Text("$year • Tap to Watch",
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _navigateWithAuthCheck(
+                        RouteHelper.movieDetailsScreen,
+                        args: {
+                          'slug': slug,
+                          'heroTag': heroTag,
+                          'imageUrl': img,
+                        },
+                      ),
+                      icon: const Icon(Icons.play_arrow,
+                          size: 28, color: Colors.white),
+                      label: const Text("Watch Now",
+                          style: TextStyle(fontSize: 15, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyColor.primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
 
-  // ← Updated: Protected "See All"
   Widget _buildSectionTitle(String title, String route) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
         child: Row(
@@ -439,123 +449,194 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
   Widget _buildLiveTVList() => SizedBox(
-      height: 180, child: _buildHorizontalList(liveChannels, isLive: true));
-  Widget _buildMoviesList() =>
-      SizedBox(height: 180, child: _buildHorizontalList(recentlyAdded));
-  Widget _buildFreeZoneList() => SizedBox(
-      height: 180,
-      child: _buildHorizontalList(freeZone,
-          badge: "FREE", badgeColor: Colors.green));
+        height: 180,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          scrollDirection: Axis.horizontal,
+          itemCount: liveChannels.length,
+          itemBuilder: (context, i) {
+            final item = liveChannels[i];
+            final String title = item['title'] ?? "Channel";
 
-  // ← Updated: All items now protected
-  Widget _buildHorizontalList(List<dynamic> items,
-      {bool isLive = false, String? badge, Color? badgeColor}) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      scrollDirection: Axis.horizontal,
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final imgPath = isLive
-            ? item['image']
-            : (item['image']?['portrait'] ?? item['image']?['landscape'] ?? '');
-        final imgUrl = imgPath == null || imgPath.toString().isEmpty
-            ? "https://via.placeholder.com/300"
-            : imgPath.toString().startsWith('http')
-                ? imgPath.toString()
-                : isLive
-                    ? "https://ott.beyondtechnepal.com/$tvBaseUrl$imgPath"
-                    : "$portraitBaseUrl$imgPath";
-
-        return _buildPoster(
-          imageUrl: imgUrl,
-          title: item['title'] ?? "Unknown",
-          onTap: () {
-            final route = isLive
-                ? RouteHelper.allLiveTVScreen // or your Live TV detail route
-                : RouteHelper.movieDetailsScreen;
-            final arg = isLive ? item['id'] : item['slug'];
-            _navigateWithAuthCheck(route, arguments: arg);
-          },
-          isLive: isLive,
-          badgeText: badge,
-          badgeColor: badgeColor,
-        );
-      },
-    );
-  }
-
-  Widget _buildPoster({
-    required String imageUrl,
-    required String title,
-    required VoidCallback onTap,
-    bool isLive = false,
-    String? badgeText,
-    Color? badgeColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(right: 12),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              Image.network(imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : Container(
-                          color: Colors.grey[850],
-                          child: const Center(
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: MyColor.primaryColor))),
-                  errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey[850],
-                      child: const Icon(Icons.broken_image,
-                          color: Colors.white38))),
-              if (isLive)
-                const Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Chip(
-                        label: Text("LIVE", style: TextStyle(fontSize: 9)),
-                        backgroundColor: Colors.red,
-                        padding: EdgeInsets.zero)),
-              if (badgeText != null)
-                Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Chip(
-                        label: Text(badgeText,
-                            style: const TextStyle(fontSize: 9)),
-                        backgroundColor: badgeColor,
-                        padding: EdgeInsets.zero)),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.black.withOpacity(0.8),
-                  child: Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
+            return InkWell(
+              onTap: () => Get.toNamed(RouteHelper.liveTvDetailsScreen,
+                  arguments: item['id']),
+              child: Container(
+                width: 140,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6))
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 25, vertical: 30),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: ImageUrlHelper.tv(item['image']),
+                              height: 90,
+                              width: 80,
+                              fit: BoxFit.contain,
+                              placeholder: (_, __) => Container(
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.live_tv,
+                                      color: Colors.white38, size: 40)),
+                              errorWidget: (_, __, ___) => Container(
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.broken_image,
+                                      color: Colors.white54, size: 40)),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: title.toLowerCase().contains("kanti")
+                                  ? const Color(0xFF00A0E3)
+                                  : Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // LIVE Badge - Fixed Position
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: Colors.red.shade600,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: const Text("LIVE",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
-      ),
-    );
-  }
+      );
+
+  Widget _buildMoviesList() =>
+      SizedBox(height: 180, child: _buildGridList(recentlyAdded));
+  Widget _buildFreeZoneList() => SizedBox(
+      height: 160,
+      child: _buildGridList(freeZone, badge: "FREE", badgeColor: Colors.green));
+
+  Widget _buildGridList(List<dynamic> items,
+          {String? badge, Color? badgeColor}) =>
+      ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (context, i) {
+          final item = items[i];
+          final imgPath =
+              item['image']?['portrait'] ?? item['image']?['landscape'] ?? '';
+          final imgUrl = imgPath.isEmpty
+              ? "https://via.placeholder.com/300"
+              : imgPath.startsWith('http')
+                  ? imgPath
+                  : "$portraitBaseUrl$imgPath";
+
+          final String heroTag = "grid_hero_${item['slug'] ?? i}";
+
+          return InkWell(
+            onTap: () => _navigateWithAuthCheck(
+              RouteHelper.movieDetailsScreen,
+              args: {
+                'slug': item['slug'],
+                'heroTag': heroTag,
+                'imageUrl': imgUrl,
+              },
+            ),
+            child: Container(
+              width: 120,
+              margin: const EdgeInsets.only(right: 12),
+              child: Hero(
+                tag: heroTag,
+                transitionOnUserGestures: true,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      Image.network(
+                        imgUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        loadingBuilder: (_, child, progress) => progress == null
+                            ? child
+                            : Container(
+                                color: Colors.grey[850],
+                                child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: MyColor.primaryColor))),
+                        errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey[850],
+                            child: const Icon(Icons.broken_image,
+                                color: Colors.white38)),
+                      ),
+                      if (badge != null)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Chip(
+                            label: Text(badge,
+                                style: const TextStyle(fontSize: 9)),
+                            backgroundColor: badgeColor,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.black.withOpacity(0.8),
+                          child: Text(
+                            item['title'] ?? "Unknown",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
 }
