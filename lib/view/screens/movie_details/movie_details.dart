@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -6,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
@@ -26,6 +28,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   late String heroTag;
   late String heroImageUrl;
+
+  bool isInWishlist = false; // Track wishlist status
+  bool isAddingToWishlist = false; // Loading state for button
 
   @override
   void initState() {
@@ -122,6 +127,71 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     }
   }
 
+  // ADD TO WISHLIST FUNCTION
+  Future<void> _addToWishlist() async {
+    if (movie == null || isAddingToWishlist) return;
+
+    final int? itemId = movie?['id'];
+    if (itemId == null) {
+      Get.snackbar("Error", "Movie ID not found",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    setState(() => isAddingToWishlist = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      Get.snackbar("Login Required", "Please login to add to wishlist",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      setState(() => isAddingToWishlist = false);
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants
+            .addWatchListEndpoint), // Make sure this is defined in api.dart
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          "item_id": itemId,
+          "episode_id": null,
+        }),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
+        setState(() => isInWishlist = true);
+        Get.snackbar(
+          "Success!",
+          jsonResponse['message']?['success']?[0] ?? "Added to Watch Later",
+          backgroundColor: MyColor.primaryColor,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+            "Failed",
+            jsonResponse['message']?['error']?[0] ??
+                "Could not add to wishlist",
+            backgroundColor: Colors.red,
+            colorText: Colors.white);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Network error. Try again.",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      setState(() => isAddingToWishlist = false);
+    }
+  }
+
   String get title => movie?['title'] ?? "Movie Title";
   String get preview => movie?['preview_text'] ?? "";
   String get desc => movie?['description'] ?? "No description.";
@@ -146,20 +216,17 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text("Movie not found",
-              style: TextStyle(color: Colors.white, fontSize: 24)),
-        ),
+            child: Text("Movie not found",
+                style: TextStyle(color: Colors.white, fontSize: 24))),
       );
     }
 
-    final double backdropHeight =
-        MediaQuery.of(context).size.height * 0.50; // 50%
+    final double backdropHeight = MediaQuery.of(context).size.height * 0.50;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // HERO BACKDROP (50% height)
           Hero(
             tag: heroTag,
             transitionOnUserGestures: true,
@@ -172,8 +239,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
               errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
             ),
           ),
-
-          // Gradient overlay
           Container(
             height: backdropHeight + MediaQuery.of(context).padding.top,
             decoration: const BoxDecoration(
@@ -184,46 +249,36 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
               ),
             ),
           ),
-
-          // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 16,
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios,
                   color: Colors.white, size: 28),
-              onPressed: () => Get.back,
+              onPressed: () => Get.back(),
             ),
           ),
-
-          // Main scrollable content
           SingleChildScrollView(
             child: Column(
               children: [
-                // Space for backdrop
                 SizedBox(height: backdropHeight),
-
-                // Content starts here
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 38,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: MyColor.primaryColor,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                            color: MyColor.primaryColor,
+                            borderRadius: BorderRadius.circular(30)),
                         child: const Text("New Release",
                             style: TextStyle(
                                 color: Colors.white,
@@ -234,30 +289,26 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 16)),
                       const SizedBox(height: 16),
-                      Text(
-                        preview.isNotEmpty ? preview : desc,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 17, height: 1.5),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(preview.isNotEmpty ? preview : desc,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 17, height: 1.5),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 20),
                       GestureDetector(
                         onTap: () => setState(() => showMore = !showMore),
-                        child: Row(
-                          children: [
-                            Text(showMore ? "Show Less" : "View More",
-                                style: const TextStyle(
-                                    color: Colors.pinkAccent,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 17)),
-                            Icon(
-                                showMore
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                color: Colors.pinkAccent),
-                          ],
-                        ),
+                        child: Row(children: [
+                          Text(showMore ? "Show Less" : "View More",
+                              style: const TextStyle(
+                                  color: Colors.pinkAccent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17)),
+                          Icon(
+                              showMore
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: Colors.pinkAccent),
+                        ]),
                       ),
                       if (showMore) ...[
                         const SizedBox(height: 24),
@@ -288,34 +339,79 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         ),
                       ],
                       const SizedBox(height: 35),
-                      SizedBox(
-                        height: 60,
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Get.toNamed('/moviepurchase-screen', arguments: {
-                              'title': title,
-                              'coverImage': heroImageUrl,
-                              'price': double.tryParse(rentPrice) ?? 325.0,
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: MyColor.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16)),
+
+                      // WISHLIST + BUY BUTTON ROW
+                      Row(
+                        children: [
+                          // ADD TO WISHLIST BUTTON
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  isAddingToWishlist ? null : _addToWishlist,
+                              icon: isAddingToWishlist
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : Icon(
+                                      isInWishlist
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 24),
+                              label: Text(
+                                  isInWishlist ? "Added" : "Watch Later",
+                                  style: const TextStyle(fontSize: 16)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isInWishlist
+                                    ? Colors.green
+                                    : MyColor.primaryColor.withOpacity(0.8),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            isFree
-                                ? "Watch Free"
-                                : "Buy Now @ NRS. ${double.parse(rentPrice).toStringAsFixed(0)}/- (24 hour)",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold),
+                          const SizedBox(width: 16),
+
+                          // BUY NOW BUTTON
+                          Expanded(
+                            flex: 3,
+                            child: SizedBox(
+                              height: 60,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Get.toNamed('/moviepurchase-screen',
+                                      arguments: {
+                                        'title': title,
+                                        'coverImage': heroImageUrl,
+                                        'price':
+                                            double.tryParse(rentPrice) ?? 325.0,
+                                      });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: MyColor.primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: Text(
+                                  isFree
+                                      ? "Watch Free"
+                                      : "Buy Now @ NRS. ${double.parse(rentPrice).toStringAsFixed(0)}/-",
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
+
                       const SizedBox(height: 40),
                       const Text("Movie Official Trailer",
                           style: TextStyle(
@@ -329,9 +425,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             borderRadius: BorderRadius.circular(16),
                             color: Colors.grey[900]),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: _buildTrailerWidget(),
-                        ),
+                            borderRadius: BorderRadius.circular(16),
+                            child: _buildTrailerWidget()),
                       ),
                       const SizedBox(height: 100),
                     ],
@@ -346,10 +441,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   }
 
   Widget _buildTrailerWidget() {
-    if (isTrailerLoading) {
+    if (isTrailerLoading)
       return const Center(
           child: CircularProgressIndicator(color: MyColor.primaryColor));
-    }
     if (trailerError.isNotEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [

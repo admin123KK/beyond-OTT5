@@ -5,13 +5,15 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:play_lab/data/controller/localization/localization_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wakelock_plus/wakelock_plus.dart'; // ← NEW: Replaced keep_screen_on
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 import 'constants/my_strings.dart';
 import 'core/di_service/di_service.dart' as di_service;
 import 'core/helper/messages.dart';
 import 'core/route/route.dart';
 import 'core/theme/dark.dart';
 import 'core/utils/my_color.dart';
+
 import 'data/controller/auth/auth/signup_controller.dart';
 import 'data/controller/auth/login_controller.dart';
 import 'data/controller/auth/social_login_controller.dart';
