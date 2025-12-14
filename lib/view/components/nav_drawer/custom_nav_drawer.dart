@@ -291,8 +291,7 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
                 _buildDrawerItem(
                     icon: Icons.card_giftcard,
                     title: MyStrings.history,
-                    onTap: () =>
-                        Get.toNamed(RouteHelper.watchPartyHistoryScreen)),
+                    onTap: () => Get.toNamed(RouteHelper.myWatchHistoryScreen)),
                 _buildDrawerItem(
                     icon: Icons.account_balance_wallet_outlined,
                     title: MyStrings.walletRecharge,

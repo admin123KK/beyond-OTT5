@@ -57,8 +57,8 @@ class _HomeScreenState extends State<HomeScreen>
     fetchDashboard();
   }
 
-  void _navigateWithAuthCheck(String route,
-      {Map<String, dynamic>? args}) async {
+  // LOGIN CHECK FOR ALL PROTECTED SCREENS (MOVIES + LIVE TV)
+  Future<void> _navigateWithAuthCheck(String route, {dynamic args}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ??
         prefs.getString('token') ??
@@ -66,12 +66,15 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (token == null || token.isEmpty) {
       Get.toNamed(RouteHelper.loginScreen);
-      Get.snackbar("Login Required", "Please login to access this content",
-          backgroundColor: Colors.red.withOpacity(0.95),
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12);
+      Get.snackbar(
+        "Login Required",
+        "Please login to access this content",
+        backgroundColor: Colors.red.withOpacity(0.95),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     } else {
       Get.toNamed(route, arguments: args);
     }
@@ -217,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ─────────────────────────────── UI WIDGETS ───────────────────────────────
   Widget _buildAppBar() => SliverAppBar(
         backgroundColor: MyColor.colorBlack,
         elevation: 0,
@@ -444,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
 
-  // FIXED LIVE TV IMAGE — NEVER DISAPPEARS
+  // LIVE TV LIST — NOW WITH LOGIN CHECK
   Widget _buildLiveTVList() => SizedBox(
         height: 180,
         child: ListView.builder(
@@ -456,7 +458,6 @@ class _HomeScreenState extends State<HomeScreen>
             final String title = item['title'] ?? "Channel";
             final String? imagePath = item['image'];
 
-            // DIRECT & CORRECT PATH — NO DEPENDENCY ON ImageUrlHelper
             final String imageUrl = imagePath == null ||
                     imagePath.isEmpty ||
                     imagePath == 'null'
@@ -466,8 +467,11 @@ class _HomeScreenState extends State<HomeScreen>
                     : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
 
             return InkWell(
-              onTap: () => Get.toNamed(RouteHelper.liveTvDetailsScreen,
-                  arguments: item['id']),
+              // LOGIN REQUIRED FOR LIVE TV DETAILS
+              onTap: () => _navigateWithAuthCheck(
+                RouteHelper.liveTvDetailsScreen,
+                args: item['id'],
+              ),
               child: Container(
                 width: 140,
                 margin: const EdgeInsets.only(right: 16),
