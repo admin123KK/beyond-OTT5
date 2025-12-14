@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -153,7 +152,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     try {
       final response = await http.post(
         Uri.parse(ApiConstants
-            .addWatchListEndpoint), // Make sure this is defined in api.dart
+            .addWishListEndpoint), // Make sure this is defined in api.dart
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

@@ -38,6 +38,8 @@ class ApiConstants {
   static const String getTicketEndpoint = "$baseUrl/api/ticket";
   static const String createTicketEndpoint = "$baseUrl/api/ticket/create";
 
-  static const String addWatchListEndpoint = "$baseUrl/api/add-wishlist";
-  static const String getWatchListEndpoint = "$baseUrl/api/wishlists";
+  static const String addWishListEndpoint = "$baseUrl/api/add-wishlist";
+
+  static const String getWishListEndpoint = "$baseUrl/api/wishlists";
+  static const String removeWishListEndpoint = "$baseUrl/api/remove-wishlist";
 }

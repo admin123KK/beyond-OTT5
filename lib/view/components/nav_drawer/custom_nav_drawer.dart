@@ -302,6 +302,10 @@ class _NavigationDrawerWidgetState extends State<NavigationDrawerWidget> {
                     title: MyStrings.setting,
                     onTap: () => Get.toNamed(RouteHelper.settingScreen)),
                 _buildDrawerItem(
+                    icon: Icons.favorite_border,
+                    title: MyStrings.wishList,
+                    onTap: () => Get.toNamed(RouteHelper.wishListScreen)),
+                _buildDrawerItem(
                     icon: Icons.support_agent_sharp,
                     title: MyStrings.supportTicket,
                     onTap: () => Get.toNamed(RouteHelper.allTicketScreen)),
