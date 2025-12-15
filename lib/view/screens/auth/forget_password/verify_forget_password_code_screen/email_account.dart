@@ -1,5 +1,6 @@
 // email_verify_account.dart ← EXACT SAME NAME
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -26,11 +27,11 @@ class EmailVerifyAccount extends StatefulWidget {
 }
 
 class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
-  String? _email;
   String _otpCode = '';
   bool _isLoading = false;
   bool _isResendLoading = false;
   String? _errorMessage;
+  String? _authToken; // To store Bearer token
 
   @override
   void initState() {
@@ -38,27 +39,41 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
     MyUtil.changeTheme();
     SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(statusBarColor: Colors.transparent));
-    _loadSavedEmail();
+    _loadAuthToken();
   }
 
-  Future<void> _loadSavedEmail() async {
+  // Load Bearer token from SharedPreferences
+  Future<void> _loadAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _email = prefs.getString('forget_pass_email') ?? '';
+      _authToken = prefs.getString('auth_token') ??
+          prefs.getString('token') ??
+          prefs.getString('access_token');
+      // Try common key names used in apps
     });
+
+    if (_authToken == null || _authToken!.isEmpty) {
+      Get.snackbar(
+          "Error", "Authentication token not found. Please login again.");
+    }
   }
 
   // AUTO SUBMIT WHEN 6 DIGITS ARE ENTERED
   void _checkAndSubmit() {
     if (_otpCode.length == 6) {
-      _verifyCode(); // AUTO SUBMIT!
+      _verifyCode();
     }
   }
 
-  // Verify the code + SAVE IT for next screen
+  // Verify the OTP code with Bearer Token
   Future<void> _verifyCode() async {
     if (_otpCode.length != 6) {
       setState(() => _errorMessage = "Please enter 6-digit code");
+      return;
+    }
+
+    if (_authToken == null || _authToken!.isEmpty) {
+      setState(() => _errorMessage = "Authentication failed. Token missing.");
       return;
     }
 
@@ -69,14 +84,14 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
 
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.verifyCodeEndpoint),
+        Uri.parse(ApiConstants.verifyEmailCodeEndpoint),
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_authToken', // ← FIXED: Bearer Token Added
         },
         body: jsonEncode({
           "code": _otpCode,
-          "email": _email,
         }),
       );
 
@@ -95,8 +110,9 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
 
         Get.offAllNamed(RouteHelper.homeScreen);
       } else {
-        final error =
-            jsonResponse['message']?['error']?[0] ?? "Invalid or expired code";
+        final error = jsonResponse['message']?['error']?[0] ??
+            jsonResponse['message'] ??
+            "Invalid or expired code";
         setState(() => _errorMessage = error);
       }
     } catch (e) {
@@ -106,10 +122,10 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
     }
   }
 
-  // Resend Code
+  // Resend Code with Bearer Token (if required by your backend)
   Future<void> _resendCode() async {
-    if (_email == null || _email!.isEmpty) {
-      Get.snackbar("Error", "Email not found!");
+    if (_authToken == null || _authToken!.isEmpty) {
+      Get.snackbar("Error", "Cannot resend: Authentication token missing.");
       return;
     }
 
@@ -117,27 +133,34 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
 
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.forgotPasswordEndpoint),
+        Uri.parse(ApiConstants
+            .forgotPasswordEndpoint), // or resend verification endpoint
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_authToken', // ← Bearer Token for Resend
         },
         body: jsonEncode({
           "type": "email",
-          "value": _email,
+          // Some backends allow resend without email if token identifies user
         }),
       );
 
       final jsonResponse = json.decode(response.body);
 
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
-        Get.snackbar("Sent!", "New code sent to $_email",
-            backgroundColor: MyColor.primaryColor, colorText: Colors.white);
+        Get.snackbar(
+          "Sent!",
+          "New verification code has been sent",
+          backgroundColor: MyColor.primaryColor,
+          colorText: Colors.white,
+        );
       } else {
-        Get.snackbar("Failed", "Could not resend code");
+        final msg = jsonResponse['message'] ?? "Failed to resend code";
+        Get.snackbar("Failed", msg);
       }
     } catch (e) {
-      Get.snackbar("Error", "No internet");
+      Get.snackbar("Error", "No internet connection");
     } finally {
       if (mounted) setState(() => _isResendLoading = false);
     }
@@ -163,59 +186,52 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
                 children: [
                   SizedBox(height: MediaQuery.of(context).size.height * 0.06),
                   Center(
-                      child: Image.asset(MyImages.emailVerifyImage,
-                          height: 100, width: 100)),
+                    child: Image.asset(
+                      MyImages.emailVerifyImage,
+                      height: 100,
+                      width: 100,
+                    ),
+                  ),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.06),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: RichText(
+                    child: Text(
+                      "Enter the verification code",
+                      style: mulishRegular.copyWith(color: MyColor.textColor),
                       textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: mulishRegular.copyWith(color: MyColor.textColor),
-                        children: [
-                          const TextSpan(
-                              text: "We sent a verification code to\n"),
-                          TextSpan(
-                              text: _email ?? "your email",
-                              style: mulishBold.copyWith(
-                                  color: MyColor.primaryColor)),
-                        ],
-                      ),
                     ),
                   ),
                   const SizedBox(height: 40),
-
-                  // AUTO SUBMIT WHEN 6 DIGITS ARE FILLED
                   OTPFieldWidget(
                     onChanged: (value) {
                       _otpCode = value;
                       if (_errorMessage != null) {
                         setState(() => _errorMessage = null);
                       }
-                      _checkAndSubmit(); // AUTO SUBMIT HERE!
+                      _checkAndSubmit(); // Auto submit on 6 digits
                     },
                   ),
-
                   if (_errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Text(_errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   const SizedBox(height: 30),
-
-                  // Button still there but auto-submit works
                   _isLoading
                       ? const RoundedLoadingButton()
                       : RoundedButton(
                           text: MyStrings.verify.tr,
                           press: _verifyCode,
                         ),
-
                   const SizedBox(height: 40),
-                  Text(MyStrings.didNotReceiveCode.tr,
-                      style: mulishRegular.copyWith(color: MyColor.textColor)),
+                  Text(
+                    MyStrings.didNotReceiveCode.tr,
+                    style: mulishRegular.copyWith(color: MyColor.textColor),
+                  ),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: _isResendLoading ? null : _resendCode,
@@ -223,11 +239,15 @@ class _EmailVerifyAccountState extends State<EmailVerifyAccount> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(MyStrings.resend.tr,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            MyStrings.resend.tr,
                             style: mulishBold.copyWith(
-                                color: MyColor.primaryColor,
-                                decoration: TextDecoration.underline)),
+                              color: MyColor.primaryColor,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 40),
                 ],

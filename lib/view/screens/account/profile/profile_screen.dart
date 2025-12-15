@@ -2,7 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/core/route/route.dart';
@@ -35,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController countryCodeController;
   late TextEditingController dialCodeController;
   late TextEditingController countryNameController;
+  late TextEditingController usernameController; // <-- NEW: Username controller
 
   // User Data
   String firstName = '';
@@ -66,6 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     countryCodeController = TextEditingController();
     dialCodeController = TextEditingController();
     countryNameController = TextEditingController();
+    usernameController = TextEditingController(); // <-- Initialize
 
     _fetchUserProfile();
   }
@@ -83,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     countryCodeController.dispose();
     dialCodeController.dispose();
     countryNameController.dispose();
+    usernameController.dispose(); // <-- Dispose
     super.dispose();
   }
 
@@ -141,6 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           countryCodeController.text = countryCode;
           dialCodeController.text = dialCode;
           countryNameController.text = countryName;
+          usernameController.text = userName; // <-- Fill username
 
           _isLoading = false;
         });
@@ -162,14 +166,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool successName = false;
     String errorMsg = "";
 
-    // API 1: submitInfoEndpoint
+    // API 1: submitInfoEndpoint (includes username)
     try {
       final body = {
         "country_code": countryCodeController.text.trim().toUpperCase(),
         "country": countryNameController.text.trim(),
         "mobile_code": dialCodeController.text.trim().replaceAll('+', ''),
         "mobile": mobileController.text.trim(),
-        "username": userName,
+        "username": usernameController.text.trim(), // <-- Send updated username
         "address": addressController.text.trim(),
         "city": cityController.text.trim(),
         "state": stateController.text.trim(),
@@ -226,6 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         firstName = firstNameController.text.trim();
         lastName = lastNameController.text.trim();
+        userName = usernameController.text.trim(); // <-- Update local username
         mobile = mobileController.text.trim();
         address = addressController.text.trim();
         city = cityController.text.trim();
@@ -256,6 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _cancelEdit() {
     firstNameController.text = firstName;
     lastNameController.text = lastName;
+    usernameController.text = userName; // <-- Reset username
     mobileController.text = mobile;
     addressController.text = address;
     cityController.text = city;
@@ -267,10 +273,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isEditing = false);
   }
 
-  // Temporary Verify Now Action (will be replaced later)
   void _onVerifyNowPressed() {
     Get.toNamed(RouteHelper.verifyEmailScreen);
-    // Later: Get.toNamed(RouteHelper.verifyAccountScreen);
   }
 
   @override
@@ -327,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mulishSemiBold.copyWith(color: Colors.white, fontSize: 20)),
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('#$userName',
+              Text('#${userName.isEmpty ? "Not set" : userName}',
                   style: mulishMedium.copyWith(
                       color: Colors.white70, fontSize: 14)),
               const SizedBox(width: 8),
@@ -342,6 +346,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
+            // Editable Fields
+            _buildField("Username", usernameController), // <-- NEW FIELD
             _buildField("First Name", firstNameController),
             _buildField("Last Name", lastNameController),
             _buildField("Email Address", emailController, enabled: false),
@@ -412,8 +418,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )),
                   ),
                 ),
-
-                // Show "Verify Now" only if NOT verified
                 if (!isVerified) ...[
                   const SizedBox(width: 16),
                   Expanded(

@@ -15,7 +15,6 @@ import 'package:play_lab/view/components/auth_image.dart';
 import 'package:play_lab/view/components/bg_widget/bg_image_widget.dart';
 import 'package:play_lab/view/components/buttons/rounded_button.dart';
 import 'package:play_lab/view/components/buttons/rounded_loading_button.dart';
-import 'package:play_lab/view/components/custom_text_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VerifyPageScreen extends StatefulWidget {
@@ -26,69 +25,77 @@ class VerifyPageScreen extends StatefulWidget {
 }
 
 class _VerifyPageScreenState extends State<VerifyPageScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-
   bool _isLoading = false;
   String? _errorMessage;
+  String? _userEmail; // To show the email (optional)
 
   @override
   void initState() {
     super.initState();
     MyUtil.changeTheme();
+    _loadUserEmailAndSendCode(); // Automatically fetch email and send code on page load
   }
 
-  Future<void> _submitForgetPassword() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final String email = _emailController.text.trim();
-    if (email.isEmpty) {
-      setState(() => _errorMessage = MyStrings.kEmailNullError.tr);
-      return;
-    }
-
+  /// Fetch user email from token & send verification code automatically
+  Future<void> _loadUserEmailAndSendCode() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _errorMessage = "Session expired. Please login again.";
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
-      final response = await http.post(
-        Uri.parse(
-            ApiConstants.forgotPasswordEndpoint), // Your /api/password/email
+      final response = await http.get(
+        Uri.parse(ApiConstants.verifyEmailEndpoint), // e.g., /api/verify/email
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          "type": "email", // or "username" if your backend supports both
-          "value": email,
-        }),
       );
 
       final jsonResponse = json.decode(response.body);
 
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
-        // Save email for next screen
-        final prefs = await SharedPreferences.getInstance();
+        // Extract email from response (optional - for display)
+        final String email =
+            jsonResponse['data']?['email'] ?? "your registered email";
+
+        // Save email for next screen (optional)
         await prefs.setString('forget_pass_email', email);
 
-        // Show success snackbar
+        setState(() {
+          _userEmail = email;
+        });
+
+        // Show success message
         Get.snackbar(
-          "Success!",
-          "Verification code sent to $email",
+          "Code Sent!",
+          "Verification code sent to your email",
           backgroundColor: MyColor.primaryColor,
           colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM,
           margin: const EdgeInsets.all(16),
           borderRadius: 12,
+          duration: const Duration(seconds: 4),
         );
 
-        // Navigate to Verify Code Screen
+        // Navigate to code verification screen
         Get.offAndToNamed(RouteHelper.codeVerifyScreen);
       } else {
         String error = "Something went wrong";
-        if (jsonResponse['message']?['error'] is List) {
+        if (jsonResponse['message'] is String) {
+          error = jsonResponse['message'];
+        } else if (jsonResponse['message']?['error'] is List) {
           error = jsonResponse['message']['error'][0];
         } else if (jsonResponse['message']?['error'] is String) {
           error = jsonResponse['message']['error'];
@@ -105,12 +112,6 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
@@ -124,76 +125,58 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.07),
-                  const AuthImageWidget(),
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.07),
+            child: Column(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.07),
+                const AuthImageWidget(),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.07),
 
-                  // Description
+                // Description
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text(
+                    'We have sent a verification code to your registered email.\nPlease check your inbox.',
+                    style: TextStyle(
+                      color: MyColor.t2,
+                      fontSize: Dimensions.authTextSize,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+                const SizedBox(height: 45),
+
+                // Show loading or error
+                if (_isLoading)
+                  const RoundedLoadingButton()
+                else if (_errorMessage != null)
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'To verify please provide your email',
-                      style: const TextStyle(
-                        color: MyColor.t2,
-                        fontSize: Dimensions.authTextSize,
-                      ),
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Sending code automatically...',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                   ),
 
-                  const SizedBox(height: 45),
+                const SizedBox(height: 40),
 
-                  // Email Field
-                  CustomTextField(
-                    controller: _emailController,
-                    hintText: MyStrings.emailOrUserName.tr,
-                    isShowBorder: true,
-                    fillColor: MyColor.textFiledFillColor,
-                    inputType: TextInputType.emailAddress,
-                    inputAction: TextInputAction.done,
-                    onChanged: (value) {
-                      if (_errorMessage != null) {
-                        setState(() => _errorMessage = null);
-                      }
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return MyStrings.kEmailNullError.tr;
-                      }
-                      return null;
-                    },
+                // Optional: Retry button if error
+                if (_errorMessage != null)
+                  RoundedButton(
+                    text: "Retry",
+                    press: _loadUserEmailAndSendCode,
                   ),
-
-                  const SizedBox(height: 15),
-
-                  // Error Message
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                      ),
-                    ),
-
-                  const SizedBox(height: 25),
-
-                  // Submit Button
-                  _isLoading
-                      ? const RoundedLoadingButton()
-                      : RoundedButton(
-                          text: MyStrings.submit.tr,
-                          press: _submitForgetPassword,
-                        ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
+              ],
             ),
           ),
         ),

@@ -1,10 +1,12 @@
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/screens/live_tv_details/image_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
@@ -248,15 +250,18 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
               ),
             ),
           ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios,
-                  color: Colors.white, size: 28),
-              onPressed: () => Get.back(),
-            ),
+          CustomAppBar(
+            title: '',
           ),
+          // Positioned(
+          //   top: MediaQuery.of(context).padding.top + 10,
+          //   left: 16,
+          //   child: IconButton(
+          //     icon: const Icon(Icons.arrow_back_ios,
+          //         color: Colors.white, size: 28),
+          //     onPressed: () => Get.back(),
+          //   ),
+          // ),
           SingleChildScrollView(
             child: Column(
               children: [

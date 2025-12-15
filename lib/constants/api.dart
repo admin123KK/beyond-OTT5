@@ -30,7 +30,8 @@ class ApiConstants {
   static const String verifyStatusEndpoint = "$baseUrl/api/authorization";
 
   static const String sendEmailEndpoint = "$baseUrl/api/password/email";
-  static const String verifyEmailEndpoint = "$baseUrl/api/verify-email";
+  static const String verifyEmailEndpoint = "$baseUrl/api/resend-verify/email";
+  static const String verifyEmailCodeEndpoint = "$baseUrl/api/verify-email";
 
   static const String policiesEndpoint = "$baseUrl/api/policies";
 
