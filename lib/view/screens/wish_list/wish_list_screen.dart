@@ -1,10 +1,8 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
-// Conditional import for ads — Web pe nahi load hoga
 import 'package:google_mobile_ads/google_mobile_ads.dart' as ads
     if (dart.library.html) 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +10,7 @@ import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
 import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/core/utils/url_container.dart'; // <-- Added for ImageHelper base URL
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +29,6 @@ class _WishListScreenState extends State<WishListScreen> {
 
   ads.BannerAd? _bannerAd;
 
-  // Safe ad unit — Web pe empty
   String get adUnitId {
     if (kIsWeb) return "";
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -90,8 +88,10 @@ class _WishListScreenState extends State<WishListScreen> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
+
         if (json['status'] == 'success') {
-          final List<dynamic> items = json['data']['wishlist'] ?? [];
+          final List<dynamic> items = json['data']['wishlists']['data'] ?? [];
+
           setState(() {
             wishlistItems = items;
             isLoading = false;
@@ -104,7 +104,7 @@ class _WishListScreenState extends State<WishListScreen> {
         }
       } else {
         setState(() {
-          errorMessage = "Server error. Please try again.";
+          errorMessage = "Server error: ${response.statusCode}";
           isLoading = false;
         });
       }
@@ -116,7 +116,7 @@ class _WishListScreenState extends State<WishListScreen> {
     }
   }
 
-  Future<void> removeFromWishlist(int itemId) async {
+  Future<void> removeFromWishlist(int wishlistId, int itemId) async {
     final prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('access_token');
 
@@ -140,7 +140,7 @@ class _WishListScreenState extends State<WishListScreen> {
         final json = jsonDecode(response.body);
         if (json['status'] == 'success') {
           setState(() {
-            wishlistItems.removeWhere((item) => item['id'] == itemId);
+            wishlistItems.removeWhere((item) => item['id'] == wishlistId);
           });
           Get.snackbar(
             "Removed",
@@ -150,10 +150,12 @@ class _WishListScreenState extends State<WishListScreen> {
             snackPosition: SnackPosition.BOTTOM,
             duration: const Duration(seconds: 2),
           );
+        } else {
+          Get.snackbar("Error", json['message'] ?? "Failed to remove", backgroundColor: Colors.red);
         }
       }
     } catch (e) {
-      Get.snackbar("Error", "Failed to remove", backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar("Error", "Failed to remove item", backgroundColor: Colors.red);
     }
   }
 
@@ -195,7 +197,7 @@ class _WishListScreenState extends State<WishListScreen> {
                         children: [
                           Icon(Icons.bookmark_border, size: 100, color: Colors.white.withOpacity(0.5)),
                           const SizedBox(height: 24),
-                          const Text("Your Watch Later is Empty", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                          const Text("Your Watch Later is Empty", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
                           Text("Add movies to watch later from movie details", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16)),
                         ],
@@ -208,25 +210,35 @@ class _WishListScreenState extends State<WishListScreen> {
                         padding: const EdgeInsets.all(16),
                         itemCount: wishlistItems.length,
                         itemBuilder: (context, index) {
-                          final item = wishlistItems[index];
-                          final String title = item['title'] ?? "Unknown Movie";
-                          final String? imgPath = item['image']?['landscape'] ?? item['image']?['portrait'];
+                          final wishlistEntry = wishlistItems[index];
+                          final movie = wishlistEntry['item'];
+
+                          final String title = movie['title'] ?? "Unknown Movie";
+                          final String previewText = movie['preview_text'] ?? "No description available";
+                          final String slug = movie['slug'] ?? "";
+                          final String? landscape = movie['image']?['landscape'];
+                          final String? portrait = movie['image']?['portrait'];
+
+                          // Prioritize landscape (horizontal) for card, fallback to portrait
+                          final String? imgPath = landscape ?? portrait;
+
+                          // Use ImageHelper base URL (standard in your app)
                           final String imgUrl = imgPath == null || imgPath.isEmpty
                               ? "https://via.placeholder.com/800x1200/1E1E1E/FFFFFF?text=No+Image"
-                              : imgPath.startsWith('http')
-                                  ? imgPath
-                                  : "https://ott.beyondtechnepal.com/$imgPath";
+                              : "${UrlContainer.baseUrl}$imgPath";
 
-                          final String heroTag = "wishlist_hero_${item['id']}";
+                          final String heroTag = "wishlist_hero_${wishlistEntry['id']}";
 
                           return GestureDetector(
-                            onTap: () {
-                              Get.toNamed(RouteHelper.movieDetailsScreen, arguments: {
-                                'slug': item['slug'],
-                                'heroTag': heroTag,
-                                'imageUrl': imgUrl,
-                              });
-                            },
+                            onTap: slug.isEmpty
+                                ? null
+                                : () {
+                                    Get.toNamed(RouteHelper.movieDetailsScreen, arguments: {
+                                      'slug': slug,
+                                      'heroTag': heroTag,
+                                      'imageUrl': imgUrl,
+                                    });
+                                  },
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 16),
                               decoration: BoxDecoration(
@@ -238,48 +250,60 @@ class _WishListScreenState extends State<WishListScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Hero(
-                                    tag: heroTag,
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                                      child: CachedNetworkImage(
-                                        imageUrl: imgUrl,
-                                        width: 130,
-                                        height: 180,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, __) => Container(color: Colors.grey[800]),
-                                        errorWidget: (_, __, ___) => Container(color: Colors.grey[800]),
-                                      ),
-                                    ),
-                                  ),
+                              //     Hero(
+                              //       tag: heroTag,
+                              //       child: ClipRRect(
+                              //         borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                              //         child: CachedNetworkImage(
+                              //           // imageUrl: imgUrl,
+                              //           width: 130,
+                              //           height: 180,
+                              //           fit: BoxFit.cover,
+                              //           placeholder: (_, __) => Container(
+                              //             color: Colors.grey[800],
+                              //             child: const Center(child: CircularProgressIndicator(color: MyColor.primaryColor)),
+                              //           ),
+                              //           errorWidget: (_, __, ___) => Container(
+                              //             color: Colors.grey[800],
+                              //             child: const Icon(Icons.broken_image, color: Colors.white38, size: 50),
+                              //           ), imageUrl: '',
+                              //         ),
+                              //       ),
+                              //     ),
                                   Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(title,
-                                              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis),
+                                          Text(
+                                            title,
+                                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                           const SizedBox(height: 8),
-                                          Text(item['preview_text'] ?? "No description",
-                                              style: const TextStyle(color: Colors.white70, fontSize: 14),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis),
+                                          Text(
+                                            previewText,
+                                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                           const SizedBox(height: 16),
                                           Row(
                                             children: [
                                               ElevatedButton.icon(
-                                                onPressed: () {
-                                                  Get.toNamed(RouteHelper.movieDetailsScreen, arguments: {
-                                                    'slug': item['slug'],
-                                                    'heroTag': heroTag,
-                                                    'imageUrl': imgUrl,
-                                                  });
-                                                },
-                                                icon: const Icon(Icons.play_arrow, size: 18),
-                                                label: const Text("Watch Now"),
+                                                onPressed: slug.isEmpty
+                                                    ? null
+                                                    : () {
+                                                        Get.toNamed(RouteHelper.movieDetailsScreen, arguments: {
+                                                          'slug': slug,
+                                                          'heroTag': heroTag,
+                                                          'imageUrl': imgUrl,
+                                                        });
+                                                      },
+                                                icon: const Icon(Icons.play_arrow, size: 18,color: Colors.white,),
+                                                label: Text(MyStrings.watchNow,style: TextStyle(color: Colors.white),),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: MyColor.primaryColor,
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -287,7 +311,11 @@ class _WishListScreenState extends State<WishListScreen> {
                                               ),
                                               const Spacer(),
                                               IconButton(
-                                                onPressed: () => removeFromWishlist(item['id']),
+                                                onPressed: () {
+                                                  final wishlistId = wishlistEntry['id'];
+                                                  final itemId = movie['id'];
+                                                  removeFromWishlist(wishlistId, itemId);
+                                                },
                                                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
                                                 tooltip: "Remove from Watch Later",
                                               ),

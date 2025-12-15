@@ -1,98 +1,295 @@
-
 import 'dart:convert';
 
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:get/Get.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' as ads
+    if (dart.library.html) 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:play_lab/constants/api.dart';
+import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/route/route.dart';
-import 'package:play_lab/data/model/watch_history/watch_history_response_model.dart';
-import 'package:play_lab/data/repo/mywatch_repo/my_watch_history_repo.dart';
+import 'package:play_lab/core/utils/my_color.dart';
+import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
+import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../core/utils/url_container.dart';
-import '../../model/global/response_model/response_model.dart';
+class WishListScreen extends StatefulWidget {
+  const WishListScreen({super.key});
 
-class MyWatchHistoryController extends GetxController implements GetxService{
+  @override
+  State<WishListScreen> createState() => _WishListScreenState();
+}
 
-  MyWatchHistoryRepo repo;
-  MyWatchHistoryController({required this.repo});
+class _WishListScreenState extends State<WishListScreen> {
+  List<dynamic> wishlistItems = [];
+  bool isLoading = true;
+  String? errorMessage;
 
-  String? nextPageUrl;
-  bool isLoading=true;
-  List<Data>movieList=[];
-  int categoryId=-1;
-  String portraitImagePath='assets/images/item/portrait/';
+  ads.BannerAd? _bannerAd;
 
-  int page = 0;
-
-  String getImagePath(int index){
-
-    String path='';
-    if(movieList[index].item!=null){
-      path='${UrlContainer.baseUrl}$portraitImagePath${movieList[index].item?.image!.portrait}';
-    }else{
-      path='${UrlContainer.baseUrl}$portraitImagePath${movieList[index].episode?.image}';
+  String get adUnitId {
+    if (kIsWeb) return "";
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return MyStrings.wishListAndroidBanner;
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return MyStrings.wishListIOSBanner;
     }
-
-    return path;
+    return "";
   }
 
-  void fetchInitialList() async {
-    updateStatus(true);
-    page =1;
-    ResponseModel model =
-    await repo.getWatchHistory(page);
+  @override
+  void initState() {
+    super.initState();
+    fetchWishlist();
+    if (!kIsWeb && adUnitId.isNotEmpty) {
+      loadAd();
+    }
+  }
 
-    if(model.statusCode==200)
-    {
-      WatchHistoryResponseModel responseModel=WatchHistoryResponseModel.fromJson(jsonDecode(model.responseJson));
-      List<Data>?tempHistoryList=responseModel.data?.histories?.data;
-      nextPageUrl=responseModel.data?.histories?.nextPageUrl;
-      if(tempHistoryList !=null && tempHistoryList.isNotEmpty ) {
-       if(page==1)movieList.clear();
-        movieList.addAll(tempHistoryList);
+  void loadAd() {
+    _bannerAd = ads.BannerAd(
+      adUnitId: adUnitId,
+      size: ads.AdSize.banner,
+      request: const ads.AdRequest(),
+      listener: ads.BannerAdListener(
+        onAdLoaded: (_) => setState(() {}),
+        onAdFailedToLoad: (ad, err) => ad.dispose(),
+      ),
+    )..load();
+  }
+
+  Future<void> fetchWishlist() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      setState(() {
+        errorMessage = "Please login to view Watch Later";
+        isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.getWishListEndpoint),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        if (json['status'] == 'success') {
+          final List<dynamic> items = json['data']['wishlists']['data'] ?? [];
+
+          setState(() {
+            wishlistItems = items;
+            isLoading = false;
+          });
+        } else {
+          setState(() {
+            errorMessage = json['message'] ?? "Failed to load wishlist";
+            isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          errorMessage = "Server error: ${response.statusCode}";
+          isLoading = false;
+        });
       }
+    } catch (e) {
+      setState(() {
+        errorMessage = "No internet connection";
+        isLoading = false;
+      });
     }
-    updateStatus(false);
   }
 
-  void fetchNewList() async {
-    page =page+1; //page+1;
-    ResponseModel model =
-    await repo.getWatchHistory(page);
+  Future<void> removeFromWishlist(int wishlistId, int itemId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('access_token');
 
-    if(model.statusCode==200)
-    {
-      WatchHistoryResponseModel responseModel=WatchHistoryResponseModel.fromJson(jsonDecode(model.responseJson));
-      List<Data>?tempHistoryList=responseModel.data?.histories?.data;
-      nextPageUrl=responseModel.data?.histories?.nextPageUrl;
+    if (token == null) return;
 
-      if(tempHistoryList !=null && tempHistoryList.isNotEmpty ) {
-        movieList.addAll(tempHistoryList);
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.removeWishListEndpoint),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          "item_id": itemId,
+          "episode_id": null,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['status'] == 'success') {
+          setState(() {
+            wishlistItems.removeWhere((item) => item['id'] == wishlistId);
+          });
+          Get.snackbar(
+            "Removed",
+            "Movie removed from Watch Later",
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 2),
+          );
+        }
       }
-      update();
+    } catch (e) {
+      Get.snackbar("Error", "Failed to remove item", backgroundColor: Colors.red);
     }
   }
 
-  updateStatus(bool status) {
-    isLoading = status;
-    update();
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
-  bool hasNext() {
-    return nextPageUrl != null ? true : false;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      drawer: const NavigationDrawerWidget(),
+      backgroundColor: MyColor.colorBlack,
+      appBar: const CustomAppBar(title: MyStrings.wishList, isShowBackBtn: true),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: MyColor.primaryColor))
+          : errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 80, color: Colors.white38),
+                      const SizedBox(height: 20),
+                      Text(errorMessage!, style: const TextStyle(color: Colors.white70, fontSize: 18)),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: fetchWishlist,
+                        style: ElevatedButton.styleFrom(backgroundColor: MyColor.primaryColor),
+                        child: const Text("Retry", style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                )
+              : wishlistItems.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bookmark_border, size: 100, color: Colors.white.withOpacity(0.5)),
+                          const SizedBox(height: 24),
+                          const Text("Your Watch Later is Empty", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Text("Add movies to watch later from movie details", style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16)),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: fetchWishlist,
+                      color: MyColor.primaryColor,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: wishlistItems.length,
+                        itemBuilder: (context, index) {
+                          final wishlistEntry = wishlistItems[index];
+                          final movie = wishlistEntry['item'];
+
+                          final String title = movie['title'] ?? "Unknown Movie";
+                          final String previewText = movie['preview_text'] ?? "No description available";
+                          final String slug = movie['slug'] ?? "";
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  previewText,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 18),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: slug.isEmpty
+                                          ? null
+                                          : () {
+                                              Get.toNamed(RouteHelper.movieDetailsScreen, arguments: {'slug': slug});
+                                            },
+                                      icon: const Icon(Icons.play_arrow, size: 18),
+                                      label: const Text("Watch Now", style: TextStyle(fontSize: 15)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: MyColor.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        final wishlistId = wishlistEntry['id'];
+                                        final itemId = movie['id'];
+                                        removeFromWishlist(wishlistId, itemId);
+                                      },
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
+                                      tooltip: "Remove from Watch Later",
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+      bottomNavigationBar: !kIsWeb && _bannerAd != null
+          ? SizedBox(height: _bannerAd!.size.height.toDouble(), child: ads.AdWidget(ad: _bannerAd!))
+          : const SizedBox.shrink(),
+    );
   }
-
-  void clearAllData(){
-    page = 0;
-    isLoading = true;
-    nextPageUrl = null;
-    movieList.clear();
-  }
-
-  void gotoDetailsPage(int index) {
-    int itemId=int.tryParse(movieList[index].itemId??'0')??0;
-    int episodeId=int.tryParse(movieList[index].episodeId??'-1')??-1;
-    Get.toNamed(RouteHelper.movieDetailsScreen,arguments: [itemId,episodeId]);
-  }
-
-
-
 }

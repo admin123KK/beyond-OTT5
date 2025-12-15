@@ -2,7 +2,6 @@ class ApiConstants {
   ApiConstants._();
 
   static const String baseUrl = "https://ott.beyondtechnepal.com";
-
   static const String registerEndpoint = "$baseUrl/api/register";
   static const String loginEndpoint = "$baseUrl/api/login";
   static const String socialLoginEndpoint = "$baseUrl/api/password/email";

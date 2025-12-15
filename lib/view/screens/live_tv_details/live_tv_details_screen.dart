@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
@@ -264,7 +265,7 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
           // Channel Info
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -274,7 +275,15 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                       fontSize: 26,
                       fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+            ),
+            child: Row(
+              children: [
                 Text(
                   'Channel Description',
                   style: const TextStyle(
@@ -282,7 +291,13 @@ class _LiveTvDetailsScreenState extends State<LiveTvDetailsScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
                 Text(
                   description,
                   style: const TextStyle(
