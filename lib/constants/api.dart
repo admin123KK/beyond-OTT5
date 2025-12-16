@@ -35,15 +35,20 @@ class ApiConstants {
 
   static const String policiesEndpoint = "$baseUrl/api/policies";
 
-  static const String getTicketEndpoint = "$baseUrl/api/ticket";
+  static const String getTicketEndpoint = "$baseUrl/api/ticket/";
   static const String createTicketEndpoint = "$baseUrl/api/ticket/create";
+  static const String viewSupportTicketEndpoint =
+      "$baseUrl/api/ticket/view/{{ticket}}";
+  static const String replySupportTicketEndpoint =
+      "$baseUrl/api/ticket/reply/{{id}}";
+  static const String closeSupportTicketEndpoint =
+      "$baseUrl/api/ticket/close/{{id}}";
 
   static const String addWishListEndpoint = "$baseUrl/api/add-wishlist";
 
   static const String getWishListEndpoint = "$baseUrl/api/wishlists";
   static const String removeWishListEndpoint = "$baseUrl/api/remove-wishlist";
   static const String histroyListEndpoint = "$baseUrl/api/history";
-
   static const String searchListEndpoint = "$baseUrl/api/search?search=beyond";
 
   static const String playvideoEndpoint = "$baseUrl/api/play?item_id=";

@@ -491,8 +491,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                       color: isInWishlist
                                           ? Colors.red
                                           : Colors.white),
-                              label:
-                                  Text(isInWishlist ? "Added" : "Watch Later"),
+                              label: Text(
+                                isInWishlist ? "Added" : "Watch Later",
+                                style: TextStyle(color: Colors.white),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isInWishlist
                                     ? Colors.green
