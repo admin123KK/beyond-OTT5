@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -36,7 +35,6 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
     _loadUserEmailAndSendCode(); // Automatically fetch email and send code on page load
   }
 
-  /// Fetch user email from token & send verification code automatically
   Future<void> _loadUserEmailAndSendCode() async {
     setState(() {
       _isLoading = true;
@@ -66,18 +64,15 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
       final jsonResponse = json.decode(response.body);
 
       if (response.statusCode == 200 && jsonResponse['status'] == 'success') {
-        // Extract email from response (optional - for display)
         final String email =
             jsonResponse['data']?['email'] ?? "your registered email";
 
-        // Save email for next screen (optional)
         await prefs.setString('forget_pass_email', email);
 
         setState(() {
           _userEmail = email;
         });
 
-        // Show success message
         Get.snackbar(
           "Code Sent!",
           "Verification code sent to your email",
@@ -89,7 +84,6 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
           duration: const Duration(seconds: 4),
         );
 
-        // Navigate to code verification screen
         Get.offAndToNamed(RouteHelper.codeVerifyScreen);
       } else {
         String error = "Something went wrong";
@@ -146,7 +140,6 @@ class _VerifyPageScreenState extends State<VerifyPageScreen> {
 
                 const SizedBox(height: 45),
 
-                // Show loading or error
                 if (_isLoading)
                   const RoundedLoadingButton()
                 else if (_errorMessage != null)

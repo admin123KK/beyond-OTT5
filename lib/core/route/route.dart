@@ -175,9 +175,7 @@ class RouteHelper {
     GetPage(name: homeScreen, page: () => const HomeScreen()),
     GetPage(name: movieDetailsScreen, page: () => MovieDetailsScreen()),
     GetPage(name: testingScreen, page: () => TestLiveTvScreen()),
-    GetPage(
-        name: searchScreen,
-        page: () => SearchScreen(searchText: Get.arguments)),
+    GetPage(name: searchScreen, page: () => SearchScreen()),
     GetPage(name: allLiveTVScreen, page: () => AllLiveTvScreen()),
     GetPage(name: liveTvDetailsScreen, page: () => const LiveTvDetailsScreen()),
     GetPage(

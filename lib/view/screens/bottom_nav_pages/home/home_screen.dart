@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -56,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen>
     fetchDashboard();
   }
 
-  // LOGIN CHECK FOR ALL PROTECTED SCREENS (MOVIES + LIVE TV)
   Future<void> _navigateWithAuthCheck(String route, {dynamic args}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ??
@@ -274,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 onPressed: () {
                                   final q = _searchController.text.trim();
                                   if (q.isNotEmpty)
-                                    Get.to(() => SearchScreen(searchText: q));
+                                    Get.to(() => SearchScreen());
                                 },
                               ),
                             ),

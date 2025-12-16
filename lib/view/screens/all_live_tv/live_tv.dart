@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -224,7 +223,7 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
                             blurRadius: 10,
                             offset: const Offset(0, 4)),
                       ]),
-                  padding: const EdgeInsets.all(9),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Stack(
                     children: [
                       Column(
@@ -252,7 +251,6 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
                           ),
                         ],
                       ),
-
                       // HD Badge
                       if (name.toLowerCase().contains("kanti") ||
                           name.toLowerCase().contains("test"))
