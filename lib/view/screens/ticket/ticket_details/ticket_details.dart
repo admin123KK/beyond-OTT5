@@ -9,6 +9,7 @@ import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/circle_icon_button.dart';
+import 'package:play_lab/view/components/custom_snackbar.dart';
 import 'package:play_lab/view/components/show_custom_snackbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zoom_tap_animation/zoom_tap_animation.dart';
@@ -23,7 +24,7 @@ class TicketDetailsScreen extends StatefulWidget {
 class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
   final TextEditingController _replyController = TextEditingController();
 
-  late String ticketNumber; // e.g. 746608
+  late String ticketNumber;
   String ticketId = '';
   String subject = '';
   String status = '0';
@@ -39,7 +40,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
     if (ticketNumber.isEmpty) {
       CustomSnackbar.showCustomSnackbar(
           errorList: ['Invalid ticket'], msg: [], isError: true);
-      if (mounted) Get.back();
+      Get.back();
       return;
     }
     fetchTicketDetails();
@@ -167,6 +168,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
     }
   }
 
+  // Close ticket → API call → back → refresh list
   Future<void> _closeTicket() async {
     if (!mounted) return;
     setState(() => isClosingTicket = true);
@@ -196,10 +198,8 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
               msg: ['Ticket closed successfully'],
               isError: false);
 
-          // Safe back to AllTicketScreen
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) Get.back();
-          });
+          // Back to AllTicketScreen and trigger refresh
+          Get.back(result: true);
         } else {
           CustomSnackbar.showCustomSnackbar(
               errorList: [json['message'] ?? 'Failed to close ticket'],
@@ -254,21 +254,13 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MyColor.bgColor,
-      // ← AppBar back button ab properly kaam karega (normal back)
-      appBar: CustomAppBar(
-        title: "Ticket #$ticketNumber",
-        // Optional: agar custom back chahiye toh yeh add kar sakte ho
-        // leading: IconButton(
-        //   icon: Icon(Icons.arrow_back, color: Colors.white),
-        //   onPressed: () => Get.back(),
-        // ),
-      ),
+      appBar: CustomAppBar(title: "Ticket #$ticketNumber"),
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: MyColor.primaryColor))
           : Column(
               children: [
-                // Header Card
+                // Header
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
@@ -304,11 +296,8 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
                       // Cross Button → Close Ticket
                       CircleIconButton(
                         onTap: () {
-                          if (status == '3') {
-                            Get.back(); // already closed → just back
-                          } else {
-                            _closeTicket(); // close API call + back
-                          }
+                          _closeTicket();
+                          showCustomSnackBar('Ticket Closed', context);
                         },
                         backgroundColor: MyColor.closeRedColor,
                         child: isClosingTicket
@@ -325,7 +314,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
                   ),
                 ),
 
-                // Messages List
+                // Messages
                 Expanded(
                   child: messages.isEmpty
                       ? Center(
@@ -400,7 +389,7 @@ class _TicketDetailsScreenState extends State<TicketDetailsScreen> {
                 if (status != '3')
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: MyColor.cardBg,
                       border:
                           Border(top: BorderSide(color: MyColor.borderColor)),
