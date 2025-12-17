@@ -5,6 +5,8 @@ import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/data/services/api_service.dart';
+import 'package:play_lab/view/screens/account/profile/profile_screen.dart';
+import 'package:play_lab/view/screens/my_search/search_screen.dart';
 
 import '../../../core/route/route.dart';
 import 'my_bottom_nav_bar_widget.dart';
@@ -111,13 +113,16 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
       }
     } else if (index == 2) {
       if (widget.currentIndex != 2) {
-        Get.offAllNamed(RouteHelper.searchScreen);
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => SearchScreen()));
       }
     } else if (index == 3) {
       if (Get.find<ApiClient>().isAuthorizeUser()) {
         Scaffold.of(context).openDrawer();
       } else {
-        Get.offAllNamed(RouteHelper.profileScreen);
+        // Get.offAllNamed(RouteHelper.profileScreen);
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => ProfileScreen()));
       }
     }
   }
