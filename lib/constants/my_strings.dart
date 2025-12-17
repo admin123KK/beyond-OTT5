@@ -117,6 +117,8 @@ class MyStrings {
       "To recover your account please provide your email or username to find your account";
   static const String yourEmailAddress = "your email address";
   static const String submit = "Submit";
+  static const String watchLater = "Watch Later";
+  static const String watchFree = "Watch Free";
   static const String forgetPassword = "Forget Password";
   static const String emailOrUserName = 'Email or username';
   static const String profile = 'Profile';
