@@ -37,12 +37,9 @@ class ApiConstants {
 
   static const String getTicketEndpoint = "$baseUrl/api/ticket/";
   static const String createTicketEndpoint = "$baseUrl/api/ticket/create";
-  static const String viewSupportTicketEndpoint =
-      "$baseUrl/api/ticket/view/{{ticket}}";
-  static const String replySupportTicketEndpoint =
-      "$baseUrl/api/ticket/reply/{{id}}";
-  static const String closeSupportTicketEndpoint =
-      "$baseUrl/api/ticket/close/{{id}}";
+  static const String viewSupportTicketEndpoint = "$baseUrl/api/ticket/view";
+  static const String replySupportTicketEndpoint = "$baseUrl/api/ticket/reply";
+  static const String closeSupportTicketEndpoint = "$baseUrl/api/ticket/close";
 
   static const String addWishListEndpoint = "$baseUrl/api/add-wishlist";
 

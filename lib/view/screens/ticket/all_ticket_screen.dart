@@ -79,7 +79,8 @@ class _AllTicketScreenState extends State<AllTicketScreen> {
     }
 
     try {
-      final String url = "${ApiConstants.viewSupportTicketEndpoint}?page=$page";
+      // List of tickets endpoint
+      final String url = "${ApiConstants.getTicketEndpoint}?page=$page";
 
       final response = await http.get(
         Uri.parse(url),
@@ -105,7 +106,8 @@ class _AllTicketScreenState extends State<AllTicketScreen> {
           final List<Map<String, dynamic>> parsedTickets = newTickets.map((e) {
             return {
               "id": e['id'].toString(),
-              "ticket": e['ticket'] ?? 'TKT-000',
+              "ticket": e['ticket']?.toString() ??
+                  'TKT-000', // ← Yeh number TicketDetails me jayega
               "subject": e['subject'] ?? 'No Subject',
               "status": e['status'].toString(),
               "priority": e['priority'].toString(),
@@ -292,13 +294,11 @@ class _AllTicketScreenState extends State<AllTicketScreen> {
                             return InkWell(
                               borderRadius: BorderRadius.circular(16),
                               onTap: () {
-                                // Navigate to Ticket Details using ticket number
+                                // ← YEH SABSE IMPORTANT CHANGE
+                                // Sirf ticket number bhej rahe hain TicketDetailsScreen ko
                                 Get.toNamed(
                                   RouteHelper.ticketDetailsdScreen,
-                                  arguments: {
-                                    'ticketNumber': t["ticket"],
-                                    'subject': t["subject"],
-                                  },
+                                  arguments: t["ticket"], // e.g. "TKT-8844"
                                 );
                               },
                               child: Container(

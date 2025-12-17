@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -13,7 +14,6 @@ import 'core/helper/messages.dart';
 import 'core/route/route.dart';
 import 'core/theme/dark.dart';
 import 'core/utils/my_color.dart';
-
 import 'data/controller/auth/auth/signup_controller.dart';
 import 'data/controller/auth/login_controller.dart';
 import 'data/controller/auth/social_login_controller.dart';
