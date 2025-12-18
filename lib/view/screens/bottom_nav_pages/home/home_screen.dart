@@ -13,7 +13,7 @@ import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/bottom_Nav/bottom_nav.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
-import 'package:play_lab/view/screens/my_search/search_screen.dart';
+import 'package:play_lab/view/screens/my_search/search_screen.dart'; // Make sure this import exists
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -258,6 +258,15 @@ class _HomeScreenState extends State<HomeScreen>
                           child: TextField(
                             controller: _searchController,
                             style: const TextStyle(color: Colors.white),
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (value) {
+                              final q = value.trim();
+                              if (q.isNotEmpty) {
+                                Get.to(
+                                    () => SearchScreen(initialSearchText: q));
+                                setState(() => _isSearchVisible = false);
+                              }
+                            },
                             decoration: InputDecoration(
                               hintText: MyStrings.search,
                               hintStyle: const TextStyle(color: Colors.white38),
@@ -273,8 +282,11 @@ class _HomeScreenState extends State<HomeScreen>
                                     color: Colors.white),
                                 onPressed: () {
                                   final q = _searchController.text.trim();
-                                  if (q.isNotEmpty)
-                                    Get.to(() => SearchScreen());
+                                  if (q.isNotEmpty) {
+                                    Get.to(() =>
+                                        SearchScreen(initialSearchText: q));
+                                    setState(() => _isSearchVisible = false);
+                                  }
                                 },
                               ),
                             ),
@@ -287,6 +299,9 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       );
+
+  // Rest of your code remains 100% unchanged below this line
+  // (Hero slider, sections, lists, etc.)
 
   Widget _buildHeroSlider() => SliverToBoxAdapter(
         child: featuredMovies.isEmpty
@@ -445,7 +460,6 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
 
-  // LIVE TV LIST — NOW WITH LOGIN CHECK
   Widget _buildLiveTVList() => SizedBox(
         height: 180,
         child: ListView.builder(
@@ -466,7 +480,6 @@ class _HomeScreenState extends State<HomeScreen>
                     : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
 
             return InkWell(
-              // LOGIN REQUIRED FOR LIVE TV DETAILS
               onTap: () => _navigateWithAuthCheck(
                 RouteHelper.liveTvDetailsScreen,
                 args: item['id'],

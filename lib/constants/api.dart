@@ -46,7 +46,8 @@ class ApiConstants {
   static const String getWishListEndpoint = "$baseUrl/api/wishlists";
   static const String removeWishListEndpoint = "$baseUrl/api/remove-wishlist";
   static const String histroyListEndpoint = "$baseUrl/api/history";
-  static const String searchListEndpoint = "$baseUrl/api/search?search=beyond";
+
+  static const String searchListEndpoint = "$baseUrl/api/search?search=";
 
   static const String playvideoEndpoint = "$baseUrl/api/play?item_id=";
 }

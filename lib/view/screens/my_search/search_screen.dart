@@ -1,14 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
-
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/view/components/app_bar/custom_appbar.dart';
 import 'package:play_lab/view/components/no_data_widget.dart';
-
 import '../../../constants/my_strings.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -25,90 +23,95 @@ class _SearchScreenState extends State<SearchScreen> {
   List<dynamic> movieList = [];
   String portraitPath = 'assets/images/item/portrait/';
   late TextEditingController _searchController;
-  String currentQuery = '';
 
-  // Debug info - to see exactly what backend returns
-  String debugUrl = '';
-  String debugStatus = '';
-  String debugResponse = '';
-  Color debugColor = Colors.grey;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _searchController =
         TextEditingController(text: widget.initialSearchText ?? '');
-    currentQuery = widget.initialSearchText?.trim() ?? '';
 
-    if (currentQuery.isNotEmpty) {
-      fetchSearchResults(currentQuery);
+    // Start searching even with initial text
+    if (widget.initialSearchText != null &&
+        widget.initialSearchText!.trim().isNotEmpty) {
+      _performSearch(widget.initialSearchText!.trim());
     }
+
+    // Listen to every character typed
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> fetchSearchResults(String query) async {
-    final q = query.trim();
-    if (q.isEmpty) {
+  void _onSearchChanged() {
+    final query = _searchController.text.trim();
+
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
+    // Allow search from the VERY FIRST LETTER (no min length)
+    if (query.isEmpty) {
       setState(() {
         movieList.clear();
-        currentQuery = '';
-        debugUrl = debugStatus = debugResponse = '';
+        isLoading = false;
       });
       return;
     }
 
+    // Fast debounce: 300ms — feels instant but prevents spam
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _performSearch(query);
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
     setState(() {
       isLoading = true;
-      movieList.clear();
-      debugUrl =
-          '${ApiConstants.searchListEndpoint}?search=${Uri.encodeComponent(q)}';
-      debugStatus = 'Calling API...';
-      debugResponse = 'Waiting...';
-      debugColor = Colors.orange;
+      // Don't clear list immediately — keeps old results until new ones load
     });
 
     try {
-      final response = await http.get(Uri.parse(debugUrl));
+      final url = Uri.parse(
+          '${ApiConstants.searchListEndpoint}${Uri.encodeComponent(query)}');
 
-      setState(() {
-        debugStatus = 'Status Code: ${response.statusCode}';
-        debugResponse = response.body.length > 800
-            ? '${response.body.substring(0, 800)}...\n(truncated)'
-            : response.body;
-        debugColor = response.statusCode == 200 ? Colors.green : Colors.red;
-      });
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
 
         if (json['status'] == 'success') {
           final data = json['data'];
-          final List<dynamic> items = data['items']['data'];
+          final List<dynamic> items = data['items']['data'] ?? [];
 
-          // Only update portrait path (we only need title + image)
-          portraitPath = data['portrait_path'] ?? portraitPath;
+          final String newPortraitPath = data['portrait_path'] ?? portraitPath;
 
           setState(() {
             movieList = items;
-            currentQuery = q;
+            portraitPath = newPortraitPath;
             isLoading = false;
           });
         } else {
-          setState(() => isLoading = false);
+          setState(() {
+            movieList = [];
+            isLoading = false;
+          });
         }
       } else {
-        setState(() => isLoading = false);
+        setState(() {
+          movieList = [];
+          isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
-        debugStatus = 'Error: $e';
-        debugResponse = 'Connection failed';
-        debugColor = Colors.red;
+        movieList = [];
         isLoading = false;
       });
     }
@@ -118,7 +121,8 @@ class _SearchScreenState extends State<SearchScreen> {
     if (filename == null || filename.isEmpty) {
       return 'https://via.placeholder.com/300x450?text=No+Image';
     }
-    return portraitPath + filename; // Only path + filename from backend
+    // Full URL with your domain
+    return 'https://ott.beyondtechnepal.com/$portraitPath$filename';
   }
 
   @override
@@ -126,73 +130,32 @@ class _SearchScreenState extends State<SearchScreen> {
     return SafeArea(
       child: Scaffold(
         backgroundColor: MyColor.colorBlack,
-        appBar: CustomAppBar(
+        appBar: const CustomAppBar(
           title: MyStrings.searchResult,
           isShowBackBtn: true,
         ),
         body: Column(
           children: [
-            // DEBUG BOX - Only shows in debug mode so you know if API is working
-            if (kDebugMode)
-              Container(
-                width: double.infinity,
-                color: debugColor.withOpacity(0.2),
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('API DEBUG INFO',
-                        style: TextStyle(
-                            color: debugColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Text('URL:',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 11)),
-                    Text(debugUrl,
-                        style:
-                            const TextStyle(color: Colors.cyan, fontSize: 10)),
-                    const SizedBox(height: 4),
-                    Text(debugStatus,
-                        style: TextStyle(
-                            color: debugColor, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text('Response:',
-                        style: TextStyle(color: Colors.white70, fontSize: 11)),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Text(debugResponse,
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 9)),
-                    ),
-                  ],
-                ),
-              ),
-
             // Search Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search by title...',
+                  hintText: 'Search movies, shows...',
                   hintStyle: const TextStyle(color: Colors.grey),
                   prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.white70),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        movieList.clear();
-                        currentQuery = '';
-                        debugUrl = debugStatus = debugResponse = '';
-                      });
-                    },
-                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.white70),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => movieList.clear());
+                          },
+                        )
+                      : null,
                   filled: true,
                   fillColor: Colors.grey[800],
                   border: OutlineInputBorder(
@@ -204,107 +167,86 @@ class _SearchScreenState extends State<SearchScreen> {
                     borderSide:
                         const BorderSide(color: Colors.white70, width: 1.5),
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onSubmitted: fetchSearchResults,
+                onSubmitted: (value) => _performSearch(value.trim()),
               ),
             ),
 
-            // Results - Only showing Title + Poster
+            // Results Area
             Expanded(
-              child: isLoading
+              child: isLoading && movieList.isEmpty
                   ? const Center(
                       child: CircularProgressIndicator(color: Colors.white))
                   : movieList.isEmpty
                       ? NoDataFoundScreen(
-                          message: currentQuery.isEmpty
-                              ? 'Type a title to search'
-                              : 'No movies found for "$currentQuery"',
+                          message: _searchController.text.trim().isEmpty
+                              ? 'Type to search movies'
+                              : 'No results for "${_searchController.text.trim()}"',
                         )
                       : GridView.builder(
                           padding: const EdgeInsets.all(12),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.68,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
+                            crossAxisCount: 3, // 3 columns for better density
+                            childAspectRatio: 0.65,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 12,
                           ),
                           itemCount: movieList.length,
                           itemBuilder: (context, index) {
                             final item = movieList[index];
                             final String title = item['title'] ?? 'No Title';
-                            final String imageUrl =
-                                getPortraitImageUrl(item['image']?['portrait']);
+                            final String? portraitFile =
+                                item['image']?['portrait'];
 
                             return InkWell(
                               onTap: () {
-                                // You can add navigation later
+                                // TODO: Go to movie detail
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Opening: $title')),
+                                );
                               },
                               borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: MyColor.colorBlack.withOpacity(0.9),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                        color: Colors.black45,
-                                        blurRadius: 8,
-                                        offset: Offset(0, 4)),
-                                  ],
-                                ),
-                                child: Column(
-                                  children: [
-                                    // Poster Image
-                                    Expanded(
-                                      flex: 5,
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                                top: Radius.circular(12)),
-                                        child: CachedNetworkImage(
-                                          imageUrl: imageUrl,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          placeholder: (_, __) => Container(
-                                            color: Colors.grey[800],
-                                            child: const Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        color: Colors.white54)),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: CachedNetworkImage(
+                                        imageUrl:
+                                            getPortraitImageUrl(portraitFile),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        placeholder: (_, __) => Container(
+                                          color: Colors.grey[800],
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                                color: Colors.white54,
+                                                strokeWidth: 2),
                                           ),
-                                          errorWidget: (_, __, ___) =>
-                                              Container(
-                                            color: Colors.grey[800],
-                                            child: const Icon(
-                                                Icons.broken_image,
-                                                color: Colors.grey,
-                                                size: 50),
-                                          ),
+                                        ),
+                                        errorWidget: (_, __, ___) => Container(
+                                          color: Colors.grey[800],
+                                          child: const Icon(Icons.broken_image,
+                                              color: Colors.grey, size: 40),
                                         ),
                                       ),
                                     ),
-                                    // Only Title
-                                    Expanded(
-                                      flex: 2,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: Center(
-                                          child: Text(
-                                            title,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ],
-                                ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             );
                           },

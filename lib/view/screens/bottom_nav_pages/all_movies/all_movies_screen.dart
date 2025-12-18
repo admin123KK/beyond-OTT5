@@ -19,7 +19,6 @@ class AllMovieScreen extends StatefulWidget {
 class _AllMovieScreenState extends State<AllMovieScreen> {
   final ScrollController _scrollController = ScrollController();
 
-  // Beautiful gradient colors for movie posters
   final List<Color> posterColors = [
     const Color(0xFFE50914), // Netflix Red
     const Color(0xFF8E2DE2), // Purple
