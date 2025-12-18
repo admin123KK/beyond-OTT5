@@ -4,9 +4,9 @@ import 'package:get/get.dart';
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart';
+import 'package:play_lab/data/controller/my_watch_history_controller/my_watch_history_controller.dart';
 import 'package:play_lab/data/services/api_service.dart';
 import 'package:play_lab/view/screens/account/profile/profile_screen.dart';
-import 'package:play_lab/view/screens/my_search/search_screen.dart';
 
 import '../../../core/route/route.dart';
 import 'my_bottom_nav_bar_widget.dart';
@@ -65,9 +65,9 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
 
         // 2 - Series
         BottomNavyBarItem(
-            icon: SvgPicture.asset(MyImages.allTvSeriesIcon,
-                height: 16,
-                width: 16,
+            icon: SvgPicture.asset(MyImages.favoriteImage,
+                height: 30,
+                width: 30,
                 color: widget.currentIndex == 2
                     ? MyColor.primaryColor
                     : MyColor.colorWhite),
@@ -114,7 +114,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
     } else if (index == 2) {
       if (widget.currentIndex != 2) {
         Navigator.push(
-            context, MaterialPageRoute(builder: (context) => SearchScreen()));
+            context, MaterialPageRoute(builder: (context) => WishListScreen()));
       }
     } else if (index == 3) {
       if (Get.find<ApiClient>().isAuthorizeUser()) {

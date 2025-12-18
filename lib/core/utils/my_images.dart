@@ -35,4 +35,9 @@ class MyImages {
   static const String esewaImage = "assets/images/esewa.png";
   static const String fonepayImage = "assets/images/fonepay.png";
   static const String stripeImage = "assets/images/stripe.png";
+
+  static const String searchImage = "assets/icons/searchh.svg";
+
+  static const String favoriteImage = "assets/icons/favorite.svg";
+  static const String favouriteListImage = "assets/icons/wishlist.svg";
 }
