@@ -50,4 +50,6 @@ class ApiConstants {
   static const String searchListEndpoint = "$baseUrl/api/search?search=";
 
   static const String playvideoEndpoint = "$baseUrl/api/play?item_id=";
+
+  static const String getAllMoviesEndpoint = "$baseUrl/api/movies";
 }
