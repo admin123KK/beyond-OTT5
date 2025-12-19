@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/styles.dart';
-import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/payement_method.dart';
+import 'package:play_lab/view/screens/subscribe_plan/add_deposit_screen/payement_method.dart'; // Assuming this is your PaymentMethodScreen (AddDepositScreen)
+import 'package:shared_preferences/shared_preferences.dart'; // Add this package if not already: shared_preferences: ^2.3.2
 
 class WalletTopUpScreen extends StatefulWidget {
   const WalletTopUpScreen({super.key});
@@ -13,6 +16,61 @@ class WalletTopUpScreen extends StatefulWidget {
 
 class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
   final TextEditingController amountController = TextEditingController();
+
+  String username = "Loading..."; // Will be updated after decoding token
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsernameFromToken();
+  }
+
+  Future<void> _loadUsernameFromToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString(
+        'token'); // Adjust key if your token is saved under different key (common: 'auth_token', 'bearer_token', etc.)
+
+    if (token == null || token.isEmpty) {
+      setState(() => username = "Guest");
+      return;
+    }
+
+    try {
+      final Map<String, dynamic> payload = _parseJwtPayload(token);
+      // Common keys for username: 'username', 'name', 'email', 'sub'
+      final String? fetchedUsername = payload['username'] ??
+          payload['name'] ??
+          payload['email'] ??
+          payload['sub'] ??
+          "Unknown User";
+
+      setState(() => username = fetchedUsername!);
+    } catch (e) {
+      setState(() => username = "Invalid Token");
+    }
+  }
+
+  Map<String, dynamic> _parseJwtPayload(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      throw Exception('Invalid JWT token');
+    }
+
+    String normalizedPayload =
+        parts[1].replaceAll('-', '+').replaceAll('_', '/');
+
+    switch (normalizedPayload.length % 4) {
+      case 2:
+        normalizedPayload += '==';
+        break;
+      case 3:
+        normalizedPayload += '=';
+        break;
+    }
+
+    final String decoded = utf8.decode(base64Url.decode(normalizedPayload));
+    return json.decode(decoded) as Map<String, dynamic>;
+  }
 
   @override
   void dispose() {
@@ -35,14 +93,13 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
           "Wallet Top Up",
           style: mulishSemiBold.copyWith(color: Colors.white, fontSize: 18),
         ),
-        // centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Username Field
+            // Username Field (now dynamic)
             Text(
               "Username",
               style: mulishMedium.copyWith(color: Colors.white70, fontSize: 14),
@@ -56,7 +113,7 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                "skykarki ftw",
+                username,
                 style:
                     mulishSemiBold.copyWith(color: Colors.white, fontSize: 17),
               ),
@@ -111,8 +168,9 @@ class _WalletTopUpScreenState extends State<WalletTopUpScreen> {
                     return;
                   }
 
-                  // Navigate to Payment Method Screen
-                  Get.to(() => PaymentMethodScreen());
+                  // Pass amount (and optionally username) to next screen
+                  Get.to(() => PaymentMethodScreen(),
+                      arguments: [amount, username]);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MyColor.primaryColor,
