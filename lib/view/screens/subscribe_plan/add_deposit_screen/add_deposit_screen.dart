@@ -1,5 +1,12 @@
+import 'dart:convert';
+
+import 'package:esewa_flutter_sdk/esewa_config.dart';
+import 'package:esewa_flutter_sdk/esewa_flutter_sdk.dart';
+import 'package:esewa_flutter_sdk/esewa_payment.dart';
+import 'package:esewa_flutter_sdk/esewa_payment_success_result.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/my_strings.dart';
 import 'package:play_lab/core/utils/my_color.dart';
 import 'package:play_lab/core/utils/my_images.dart'; // Your image class
@@ -15,6 +22,11 @@ class AddDepositScreen extends StatefulWidget {
 
 class _AddDepositScreenState extends State<AddDepositScreen> {
   int selectedIndex = 0;
+
+  // Test credentials - REPLACE with your real merchant clientId & secretKey in production
+  static const String CLIENT_ID =
+      "JB0BBQ4aD0UqIThFJwAKBgAXEUkEGQUBBAwdOgABHD4DChwUAB0R";
+  static const String SECRET_KEY = "BhwIWQQADhIYSxILExMcAgFXFhcOBwAKBgAXEQ==";
 
   final List<Map<String, dynamic>> paymentMethods = [
     {
@@ -45,6 +57,9 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
     final String price = args?[0] as String? ?? "रू499";
     final String planName = args?[1] as String? ?? "Pro Plan";
 
+    // Extract numeric amount (remove 'रू' and any commas)
+    final String amountStr = price.replaceAll(RegExp(r'[^\d.]'), '');
+
     return Scaffold(
       backgroundColor: MyColor.colorBlack,
       appBar: const CustomAppBar(
@@ -57,7 +72,7 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Plan Summary Card
+            // Plan Summary Card (unchanged)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -107,7 +122,7 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
                     mulishSemiBold.copyWith(color: Colors.white, fontSize: 18)),
             const SizedBox(height: 16),
 
-            // Payment Method Cards (Like Your Image)
+            // Payment Method Cards (unchanged)
             ...List.generate(paymentMethods.length, (index) {
               final method = paymentMethods[index];
               final bool isSelected = selectedIndex == index;
@@ -128,7 +143,6 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Logo
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.asset(
@@ -144,10 +158,7 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 16),
-
-                      // Name & Subtitle
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,8 +177,6 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
                           ],
                         ),
                       ),
-
-                      // Arrow
                       Icon(
                         Icons.arrow_forward_ios,
                         color:
@@ -187,7 +196,13 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  _showSuccessDialog(context, planName, price);
+                  if (selectedIndex == 1) {
+                    // eSewa selected (index 1)
+                    _initiateEsewaPayment(amountStr, planName);
+                  } else {
+                    // For other methods, keep old behavior or implement similarly
+                    _showSuccessDialog(context, planName, price);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MyColor.primaryColor,
@@ -206,6 +221,74 @@ class _AddDepositScreenState extends State<AddDepositScreen> {
         ),
       ),
     );
+  }
+
+  void _initiateEsewaPayment(String amount, String productName) {
+    final String uniqueProductId = DateTime.now()
+        .millisecondsSinceEpoch
+        .toString(); // Unique transaction UUID
+
+    try {
+      EsewaFlutterSdk.initPayment(
+        esewaConfig: EsewaConfig(
+          environment:
+              Environment.test, // Change to Environment.live in production
+          clientId: CLIENT_ID,
+          secretId: SECRET_KEY,
+        ),
+        esewaPayment: EsewaPayment(
+          productId: uniqueProductId,
+          productName: productName,
+          productPrice: amount,
+          callbackUrl: '',
+        ),
+        onPaymentSuccess: (EsewaPaymentSuccessResult data) {
+          debugPrint(":::eSewa SUCCESS::: => $data");
+          verifyTransactionStatus(data, productName, "रू$amount");
+          _showSuccessDialog(context, '', '$amount');
+        },
+        onPaymentFailure: (data) {
+          debugPrint(":::eSewa FAILURE::: => $data");
+          Get.snackbar(
+              "Payment Failed", "Transaction failed. Please try again.");
+        },
+        onPaymentCancellation: (data) {
+          debugPrint(":::eSewa CANCELLATION::: => $data");
+          Get.snackbar("Payment Cancelled", "You cancelled the payment.");
+        },
+      );
+    } on Exception catch (e) {
+      debugPrint("eSewa EXCEPTION : ${e.toString()}");
+      Get.snackbar("Error", "Failed to initiate payment.");
+    }
+  }
+
+  Future<void> verifyTransactionStatus(
+      EsewaPaymentSuccessResult result, String planName, String price) async {
+    // Call eSewa transaction status verification API
+    final url = Uri.parse(
+        'https://rc.esewa.com.np/api/epay/transaction/status/'); // Use production URL in live
+    final response = await http.get(url, headers: {
+      'product_code': 'EPAYTEST', // Your merchant code (EPAYTEST for test)
+      'total_amount': result.totalAmount ?? '',
+      'transaction_uuid': result.productId ?? '',
+    });
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      final status = jsonResponse['transactionDetails']?['status'] ??
+          jsonResponse['status'];
+
+      if (status == 'COMPLETE' || status == 'SUCCESS') {
+        // Payment verified successfully
+        _showSuccessDialog(context, planName, price);
+        // TODO: Call your backend to activate subscription
+      } else {
+        Get.snackbar("Verification Failed", "Transaction not completed.");
+      }
+    } else {
+      Get.snackbar("Verification Error", "Could not verify transaction.");
+    }
   }
 
   void _showSuccessDialog(BuildContext context, String planName, String price) {

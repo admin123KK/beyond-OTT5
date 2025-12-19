@@ -209,6 +209,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.7"
+  esewa_flutter_sdk:
+    dependency: "direct main"
+    description:
+      path: "external_sdk/eSewa Flutter Sdk v2.5.3_23/esewa_flutter_sdk"
+      relative: true
+    source: path
+    version: "2.5.3+23"
   fake_async:
     dependency: transitive
     description:
@@ -516,10 +523,10 @@ packages:
     dependency: "direct main"
     description:
       name: get
-      sha256: c79eeb4339f1f3deffd9ec912f8a923834bec55f7b49c9e882b8fef2c139d425
+      sha256: "5ed34a7925b85336e15d472cc4cfe7d9ebf4ab8e8b9f688585bf6b50f4c3d79a"
       url: "https://pub.dev"
     source: hosted
-    version: "4.7.2"
+    version: "4.7.3"
   google_identity_services_web:
     dependency: transitive
     description:
@@ -716,10 +723,10 @@ packages:
     dependency: transitive
     description:
       name: js
-      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
+      sha256: c1b2e9b5ea78c45e1a0788d29606ba27dc5f71f019f32ca5140f61ef071838cf
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.7"
+    version: "0.7.1"
   json_annotation:
     dependency: "direct main"
     description:
@@ -1020,10 +1027,10 @@ packages:
     dependency: "direct main"
     description:
       name: pusher_channels_flutter
-      sha256: "0b06194d85d1665d21e634ea091917b28670fb6d585d76903a4f72d894906000"
+      sha256: "4d83b2012079c7d1a3c42cee1d37a48c974504d869b6a9c085144b2d4e35e58a"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.0"
+    version: "2.5.0"
   readmore:
     dependency: "direct main"
     description:

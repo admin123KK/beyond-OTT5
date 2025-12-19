@@ -302,7 +302,7 @@ class _WishListScreenState extends State<WishListScreen> {
                                                           'imageUrl': imgUrl,
                                                         });
                                                       },
-                                                icon: const Icon(Icons.play_arrow, size: 18,color: Colors.white,),
+                                                icon: const Icon(Icons.play_arrow_outlined, size: 18,color: Colors.white,),
                                                 label: Text(MyStrings.watchNow,style: TextStyle(color: Colors.white),),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: MyColor.primaryColor,

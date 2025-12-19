@@ -63,7 +63,7 @@ flutter {
 
 dependencies {
     implementation "com.google.android.gms:play-services-ads:23.1.0"
-    
+    // classpath 'com.android.tools.build:gradle:8.13'
     // THIS LINE FIXES flutter_local_notifications + many other plugins
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.2'
 }

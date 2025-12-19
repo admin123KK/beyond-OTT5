@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -7,7 +6,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:play_lab/data/controller/localization/localization_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-
 import 'constants/my_strings.dart';
 import 'core/di_service/di_service.dart' as di_service;
 import 'core/helper/messages.dart';
@@ -33,8 +31,8 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 Future<void> main() async {
+  // NoScreenshot.instance.screenshotOff();
   WidgetsFlutterBinding.ensureInitialized();
-
   // 1. Google Mobile Ads
   MobileAds.instance.initialize();
 
@@ -59,7 +57,6 @@ Future<void> main() async {
 
   // 6. Register all GetX dependencies
   await _setupGetXDependencies();
-
   runApp(MyApp(languages: languages));
 }
 
