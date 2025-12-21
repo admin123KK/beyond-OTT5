@@ -66,8 +66,8 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
         // 2 - Series
         BottomNavyBarItem(
             icon: SvgPicture.asset(MyImages.favoriteImage,
-                height: 30,
-                width: 30,
+                height: 23,
+                width: 23,
                 color: widget.currentIndex == 2
                     ? MyColor.primaryColor
                     : MyColor.colorWhite),

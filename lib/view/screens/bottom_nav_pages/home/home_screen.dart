@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/Get.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:play_lab/constants/api.dart';
 import 'package:play_lab/constants/my_strings.dart';
@@ -12,22 +13,21 @@ import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/core/utils/styles.dart';
 import 'package:play_lab/view/components/bottom_Nav/bottom_nav.dart';
 import 'package:play_lab/view/components/nav_drawer/custom_nav_drawer.dart';
-import 'package:play_lab/view/screens/my_search/search_screen.dart'; // Make sure this import exists
+import 'package:play_lab/view/screens/my_search/search_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
-  bool _isSearchVisible = false;
   int _currentPage = 0;
-  late Timer _timer;
+  late Timer _autoSlideTimer;
   final PageController _pageController = PageController();
-  final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   String? _error;
@@ -40,42 +40,26 @@ class _HomeScreenState extends State<HomeScreen>
   String portraitBaseUrl = "";
   String landscapeBaseUrl = "";
 
+  // Tab index for category switching
+  int _selectedTabIndex = 2; // Default to "Movies"
+
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    fetchDashboard();
+
+    // Auto slide every 3 seconds (fast)
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (featuredMovies.isEmpty || !_pageController.hasClients) return;
       setState(() {
-        _currentPage =
-            _currentPage < featuredMovies.length - 1 ? _currentPage + 1 : 0;
-        _pageController.animateToPage(_currentPage,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOut);
+        _currentPage = (_currentPage + 1) % featuredMovies.length;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
       });
     });
-    fetchDashboard();
-  }
-
-  Future<void> _navigateWithAuthCheck(String route, {dynamic args}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ??
-        prefs.getString('token') ??
-        prefs.getString('access_token');
-
-    if (token == null || token.isEmpty) {
-      Get.toNamed(RouteHelper.loginScreen);
-      Get.snackbar(
-        "Login Required",
-        "Please login to access this content",
-        backgroundColor: Colors.red.withOpacity(0.95),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-    } else {
-      Get.toNamed(route, arguments: args);
-    }
   }
 
   Future<void> fetchDashboard() async {
@@ -123,24 +107,22 @@ class _HomeScreenState extends State<HomeScreen>
       final img =
           item['image']?['landscape'] ?? item['image']?['portrait'] ?? '';
       final url = img.isEmpty
-          ? "https://via.placeholder.com/800x1200/222222/FFFFFF?text=${item['title']?.substring(0, 2).toUpperCase()}"
+          ? "https://via.placeholder.com/800x450/222222/FFFFFF?text=${item['title']?.substring(0, 2).toUpperCase()}"
           : img.startsWith('http')
               ? img
               : "$landscapeBaseUrl$img";
       return {
         "title": item['title'] ?? "Untitled",
         "image": url,
-        "year": item['created_at']?.substring(0, 4) ?? "2025",
-        "slug": item['slug']?.toString() ?? ""
+        "slug": item['slug']?.toString() ?? "",
       };
     }).toList();
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _autoSlideTimer.cancel();
     _pageController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -179,38 +161,252 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     )
                   : CustomScrollView(
-                      physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics()),
+                      physics: const BouncingScrollPhysics(),
                       slivers: [
-                        _buildAppBar(),
-                        _buildHeroSlider(),
+                        // App Bar
+                        SliverAppBar(
+                          backgroundColor: MyColor.colorBlack,
+                          elevation: 0,
+                          pinned: true,
+                          floating: true,
+                          leading: Builder(
+                            builder: (context) => IconButton(
+                              icon: const Icon(Icons.menu, color: Colors.white),
+                              onPressed: () =>
+                                  Scaffold.of(context).openDrawer(),
+                            ),
+                          ),
+                          actions: [
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.search, color: Colors.white),
+                              onPressed: () =>
+                                  Get.to(() => const SearchScreen()),
+                            ),
+                          ],
+                          title: Image.asset(MyImages.logo,
+                              height: 40, fit: BoxFit.contain),
+                        ),
+
+                        // Hero Slider with Dots (no title)
                         SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 20),
-                              if (liveChannels.isNotEmpty) ...[
-                                _buildSectionTitle(MyStrings.liveTV,
-                                    RouteHelper.allLiveTVScreen),
-                                _buildLiveTVList(),
-                                const SizedBox(height: 20),
-                              ],
-                              if (recentlyAdded.isNotEmpty) ...[
-                                _buildSectionTitle(
-                                    "New Releases", RouteHelper.allMovieScreen),
-                                _buildMoviesList(),
-                                const SizedBox(height: 20),
-                              ],
-                              if (freeZone.isNotEmpty) ...[
-                                _buildSectionTitle(MyStrings.ourFreeZone,
-                                    RouteHelper.allFreeZoneScreen),
-                                _buildFreeZoneList(),
-                                const SizedBox(height: 20),
-                              ],
-                              const SizedBox(height: 100),
-                            ],
+                          child: featuredMovies.isEmpty
+                              ? const SizedBox(
+                                  height: 220,
+                                  child: Center(
+                                      child: Text("No Featured Content",
+                                          style: TextStyle(
+                                              color: Colors.white38))))
+                              : SizedBox(
+                                  height: MediaQuery.of(context).size.width *
+                                      0.5625, // 16:9
+                                  child: Stack(
+                                    children: [
+                                      PageView.builder(
+                                        controller: _pageController,
+                                        onPageChanged: (i) =>
+                                            setState(() => _currentPage = i),
+                                        itemCount: featuredMovies.length,
+                                        itemBuilder: (_, i) {
+                                          final movie = featuredMovies[i];
+                                          return GestureDetector(
+                                            onTap: () => _navigateWithAuthCheck(
+                                              RouteHelper.movieDetailsScreen,
+                                              args: {
+                                                'slug': movie['slug'],
+                                                'imageUrl': movie['image'],
+                                              },
+                                            ),
+                                            child: CachedNetworkImage(
+                                              imageUrl: movie['image'],
+                                              fit: BoxFit.cover,
+                                              placeholder: (_, __) => Container(
+                                                  color: Colors.grey[900]),
+                                              errorWidget: (_, __, ___) =>
+                                                  Container(
+                                                      color: Colors.grey[900]),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      // Circular dots
+                                      Positioned(
+                                        bottom: 16,
+                                        left: 0,
+                                        right: 0,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(
+                                            featuredMovies.length,
+                                            (i) => Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 4),
+                                              width: _currentPage == i ? 24 : 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color: _currentPage == i
+                                                    ? MyColor.primaryColor
+                                                    : Colors.white54,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+
+                        // Tab Bar (Pinned)
+                        SliverPersistentHeader(
+                          pinned: true,
+                          delegate: _TabBarDelegate(
+                            selectedIndex: _selectedTabIndex,
+                            onTabChanged: (index) {
+                              setState(() => _selectedTabIndex = index);
+                              // You can add logic here to filter content based on tab
+                              // For now, we show all categories in "All" and "Movies"
+                            },
                           ),
                         ),
+
+                        // Live TV Section (only show if "All" or "Live" is selected)
+                        if (_selectedTabIndex == 0 ||
+                            _selectedTabIndex == 6) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionHeader(
+                                MyStrings.liveTV, RouteHelper.allLiveTVScreen),
+                          ),
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              height: 200,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                itemCount: liveChannels.length,
+                                itemBuilder: (context, i) {
+                                  final item = liveChannels[i];
+                                  final String title =
+                                      item['title'] ?? "Channel";
+                                  final String? imagePath = item['image'];
+
+                                  final String imageUrl = imagePath == null ||
+                                          imagePath.isEmpty ||
+                                          imagePath == 'null'
+                                      ? "https://via.placeholder.com/300/1E1E1E/FFFFFF?text=TV"
+                                      : imagePath.startsWith('http')
+                                          ? imagePath
+                                          : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
+
+                                  return GestureDetector(
+                                    onTap: () => _navigateWithAuthCheck(
+                                      RouteHelper.liveTvDetailsScreen,
+                                      args: item['id'],
+                                    ),
+                                    child: Container(
+                                      width: 140,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            child: CachedNetworkImage(
+                                              imageUrl: imageUrl,
+                                              height: 130,
+                                              width: 130,
+                                              fit: BoxFit.cover,
+                                              placeholder: (_, __) => Container(
+                                                  color: Colors.grey[850]),
+                                              errorWidget: (_, __, ___) =>
+                                                  Container(
+                                                      color: Colors.grey[850]),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 6,
+                                            right: 8,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 7,
+                                                      vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: const Text(
+                                                "LIVE",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        // New Releases (show for All, Movies, Web Series)
+                        if (_selectedTabIndex == 0 ||
+                            _selectedTabIndex == 2 ||
+                            _selectedTabIndex == 3) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionHeader(
+                                "New Releases", RouteHelper.allMovieScreen),
+                          ),
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              height: 240,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                itemCount: recentlyAdded.length,
+                                itemBuilder: (context, i) =>
+                                    _buildPoster(recentlyAdded[i]),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        // Trending (show for All, Movies)
+                        if (_selectedTabIndex == 0 ||
+                            _selectedTabIndex == 2) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionHeader(
+                                "Trending", RouteHelper.allMovieScreen),
+                          ),
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              height: 240,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                itemCount: recentlyAdded.length,
+                                itemBuilder: (context, i) =>
+                                    _buildPoster(recentlyAdded[i]),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SliverToBoxAdapter(child: SizedBox(height: 40)),
                       ],
                     ),
         ),
@@ -218,448 +414,180 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildAppBar() => SliverAppBar(
-        backgroundColor: MyColor.colorBlack,
-        elevation: 0,
-        pinned: true,
-        expandedHeight: _isSearchVisible ? 170 : 110,
-        flexibleSpace: FlexibleSpaceBar(
-          background: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Image.asset(MyImages.logo, height: 55, fit: BoxFit.contain),
-                    InkWell(
-                      onTap: () =>
-                          setState(() => _isSearchVisible = !_isSearchVisible),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                            color: MyColor.bgColor, shape: BoxShape.circle),
-                        child: Icon(
-                            _isSearchVisible ? Icons.close : Icons.search,
-                            color: Colors.white,
-                            size: 24),
-                      ),
-                    ),
-                  ],
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  height: _isSearchVisible ? 70 : 0,
-                  child: _isSearchVisible
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 15),
-                          child: TextField(
-                            controller: _searchController,
-                            style: const TextStyle(color: Colors.white),
-                            textInputAction: TextInputAction.search,
-                            onSubmitted: (value) {
-                              final q = value.trim();
-                              if (q.isNotEmpty) {
-                                Get.to(
-                                    () => SearchScreen(initialSearchText: q));
-                                setState(() => _isSearchVisible = false);
-                              }
-                            },
-                            decoration: InputDecoration(
-                              hintText: MyStrings.search,
-                              hintStyle: const TextStyle(color: Colors.white38),
-                              filled: true,
-                              fillColor: MyColor.textFiledFillColor,
-                              prefixIcon: const Icon(Icons.search,
-                                  color: Colors.white70),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                  borderSide: BorderSide.none),
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.arrow_forward_ios,
-                                    color: Colors.white),
-                                onPressed: () {
-                                  final q = _searchController.text.trim();
-                                  if (q.isNotEmpty) {
-                                    Get.to(() =>
-                                        SearchScreen(initialSearchText: q));
-                                    setState(() => _isSearchVisible = false);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-              ],
+  Widget _buildSectionHeader(String title, String route) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: mulishBold.copyWith(color: Colors.white, fontSize: 20),
+          ),
+          GestureDetector(
+            onTap: () => _navigateWithAuthCheck(route),
+            child: Text(
+              "See More",
+              style: mulishSemiBold.copyWith(
+                  color: MyColor.primaryColor, fontSize: 14),
             ),
           ),
-        ),
-      );
-
-  // Rest of your code remains 100% unchanged below this line
-  // (Hero slider, sections, lists, etc.)
-
-  Widget _buildHeroSlider() => SliverToBoxAdapter(
-        child: featuredMovies.isEmpty
-            ? const SizedBox(
-                height: 400,
-                child: Center(
-                    child: Text("No Featured Content",
-                        style: TextStyle(color: Colors.white38))))
-            : AspectRatio(
-                aspectRatio: 1.1,
-                child: Stack(
-                  children: [
-                    PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (i) => setState(() => _currentPage = i),
-                      itemCount: featuredMovies.length,
-                      itemBuilder: (_, i) =>
-                          _buildFeaturedItem(featuredMovies[i]),
-                    ),
-                    Positioned(
-                      bottom: 20,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          featuredMovies.length,
-                          (i) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentPage == i ? 28 : 10,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _currentPage == i
-                                  ? MyColor.primaryColor
-                                  : Colors.white54,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      );
-
-  Widget _buildFeaturedItem(Map<String, dynamic> movie) {
-    final String img = movie["image"];
-    final String title = movie["title"];
-    final String year = movie["year"];
-    final String slug = movie["slug"];
-    final String heroTag = "featured_hero_$slug";
-
-    return InkWell(
-      onTap: () => _navigateWithAuthCheck(
-        RouteHelper.movieDetailsScreen,
-        args: {
-          'slug': slug,
-          'heroTag': heroTag,
-          'imageUrl': img,
-        },
+        ],
       ),
+    );
+  }
+
+  Widget _buildPoster(dynamic item) {
+    final imgPath =
+        item['image']?['portrait'] ?? item['image']?['landscape'] ?? '';
+    final imgUrl = imgPath.isEmpty
+        ? "https://via.placeholder.com/300"
+        : imgPath.startsWith('http')
+            ? imgPath
+            : "$portraitBaseUrl$imgPath";
+
+    final String? slug = item['slug'];
+
+    return GestureDetector(
+      onTap: () {
+        if (slug != null) {
+          _navigateWithAuthCheck(
+            RouteHelper.movieDetailsScreen,
+            args: {'slug': slug, 'imageUrl': imgUrl},
+          );
+        }
+      },
       child: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(image: NetworkImage(img), fit: BoxFit.cover),
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black87],
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Hero(
-                  tag: heroTag,
-                  transitionOnUserGestures: true,
-                  child: Image.network(
-                    img,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : Container(color: Colors.grey[900]),
-                    errorBuilder: (_, __, ___) =>
-                        Container(color: Colors.grey[900]),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(blurRadius: 10, color: Colors.black)
-                            ])),
-                    Text("$year • Tap to Watch",
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 16)),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () => _navigateWithAuthCheck(
-                        RouteHelper.movieDetailsScreen,
-                        args: {
-                          'slug': slug,
-                          'heroTag': heroTag,
-                          'imageUrl': img,
-                        },
-                      ),
-                      icon: const Icon(Icons.play_arrow,
-                          size: 28, color: Colors.white),
-                      label: const Text("Watch Now",
-                          style: TextStyle(fontSize: 15, color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: MyColor.primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: imgUrl,
+            fit: BoxFit.cover,
+            height: 200,
+            width: 140,
+            placeholder: (_, __) => Container(color: Colors.grey[850]),
+            errorWidget: (_, __, ___) => Container(color: Colors.grey[850]),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, String route) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title,
-                style: mulishBold.copyWith(color: Colors.white, fontSize: 19)),
-            GestureDetector(
-              onTap: () => _navigateWithAuthCheck(route),
-              child: Text("See All ",
-                  style: mulishSemiBold.copyWith(
-                      color: MyColor.primaryColor, fontSize: 14)),
-            ),
-          ],
-        ),
+  Future<void> _navigateWithAuthCheck(String route, {dynamic args}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ??
+        prefs.getString('token') ??
+        prefs.getString('access_token');
+
+    if (token == null || token.isEmpty) {
+      Get.toNamed(RouteHelper.loginScreen);
+      Get.snackbar(
+        "Login Required",
+        "Please login to access this content",
+        backgroundColor: Colors.red.withOpacity(0.95),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
+    } else {
+      Get.toNamed(route, arguments: args);
+    }
+  }
+}
 
-  Widget _buildLiveTVList() => SizedBox(
-        height: 180,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          scrollDirection: Axis.horizontal,
-          itemCount: liveChannels.length,
-          itemBuilder: (context, i) {
-            final item = liveChannels[i];
-            final String title = item['title'] ?? "Channel";
-            final String? imagePath = item['image'];
+// Pinned Tab Bar Delegate
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final int selectedIndex;
+  final Function(int) onTabChanged;
 
-            final String imageUrl = imagePath == null ||
-                    imagePath.isEmpty ||
-                    imagePath == 'null'
-                ? "https://via.placeholder.com/300/1E1E1E/FFFFFF?text=TV"
-                : imagePath.startsWith('http')
-                    ? imagePath
-                    : "https://ott.beyondtechnepal.com/assets/images/television/$imagePath";
+  _TabBarDelegate({required this.selectedIndex, required this.onTabChanged});
 
-            return InkWell(
-              onTap: () => _navigateWithAuthCheck(
-                RouteHelper.liveTvDetailsScreen,
-                args: item['id'],
-              ),
-              child: Container(
-                width: 140,
-                margin: const EdgeInsets.only(right: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6))
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 25, vertical: 30),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              height: 90,
-                              width: 80,
-                              fit: BoxFit.contain,
-                              memCacheHeight: 300,
-                              memCacheWidth: 250,
-                              placeholder: (_, __) => Container(
-                                  color: Colors.grey[800],
-                                  child: const Icon(Icons.live_tv,
-                                      color: Colors.white38, size: 40)),
-                              errorWidget: (_, __, ___) => Container(
-                                  color: Colors.grey[800],
-                                  child: const Icon(Icons.broken_image,
-                                      color: Colors.white54, size: 40)),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            title,
-                            style: TextStyle(
-                              color: title.toLowerCase().contains("kanti")
-                                  ? const Color(0xFF00A0E3)
-                                  : Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: Colors.red.shade600,
-                            borderRadius: BorderRadius.circular(8)),
-                        child: const Text("LIVE",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
+  @override
+  double get maxExtent => 56;
+  @override
+  double get minExtent => 56;
 
-  Widget _buildMoviesList() =>
-      SizedBox(height: 180, child: _buildGridList(recentlyAdded));
-  Widget _buildFreeZoneList() => SizedBox(
-      height: 160,
-      child: _buildGridList(freeZone, badge: "FREE", badgeColor: Colors.green));
-
-  Widget _buildGridList(List<dynamic> items,
-          {String? badge, Color? badgeColor}) =>
-      ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: MyColor.colorBlack,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: ListView(
         scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        itemBuilder: (context, i) {
-          final item = items[i];
-          final imgPath =
-              item['image']?['portrait'] ?? item['image']?['landscape'] ?? '';
-          final imgUrl = imgPath.isEmpty
-              ? "https://via.placeholder.com/300"
-              : imgPath.startsWith('http')
-                  ? imgPath
-                  : "$portraitBaseUrl$imgPath";
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _TabItem(
+            title: 'All',
+            isSelected: selectedIndex == 0,
+            onTap: () => onTabChanged(0),
+          ),
+          _TabItem(
+            title: 'Shows',
+            isSelected: selectedIndex == 1,
+            onTap: () => onTabChanged(1),
+          ),
+          _TabItem(
+            title: 'Movies',
+            isSelected: selectedIndex == 2,
+            onTap: () => onTabChanged(2),
+          ),
+          _TabItem(
+            title: 'Web Series',
+            isSelected: selectedIndex == 3,
+            onTap: () => onTabChanged(3),
+          ),
+          _TabItem(
+            title: 'Sports',
+            isSelected: selectedIndex == 4,
+            onTap: () => onTabChanged(4),
+          ),
+          _TabItem(
+            title: 'Kids',
+            isSelected: selectedIndex == 5,
+            onTap: () => onTabChanged(5),
+          ),
+          _TabItem(
+            title: 'Live',
+            isSelected: selectedIndex == 6,
+            onTap: () => onTabChanged(6),
+          ),
+        ],
+      ),
+    );
+  }
 
-          final String heroTag = "grid_hero_${item['slug'] ?? i}";
+  @override
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) =>
+      oldDelegate.selectedIndex != selectedIndex;
+}
 
-          return InkWell(
-            onTap: () => _navigateWithAuthCheck(
-              RouteHelper.movieDetailsScreen,
-              args: {
-                'slug': item['slug'],
-                'heroTag': heroTag,
-                'imageUrl': imgUrl,
-              },
-            ),
-            child: Container(
-              width: 120,
-              margin: const EdgeInsets.only(right: 12),
-              child: Hero(
-                tag: heroTag,
-                transitionOnUserGestures: true,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Stack(
-                    children: [
-                      Image.network(
-                        imgUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        loadingBuilder: (_, child, progress) => progress == null
-                            ? child
-                            : Container(
-                                color: Colors.grey[850],
-                                child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: MyColor.primaryColor))),
-                        errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[850],
-                            child: const Icon(Icons.broken_image,
-                                color: Colors.white38)),
-                      ),
-                      if (badge != null)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Chip(
-                            label: Text(badge,
-                                style: const TextStyle(fontSize: 9)),
-                            backgroundColor: badgeColor,
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.black.withOpacity(0.8),
-                          child: Text(
-                            item['title'] ?? "Unknown",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      );
+class _TabItem extends StatelessWidget {
+  final String title;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TabItem(
+      {required this.title, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white70,
+            fontSize: 16,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
 }

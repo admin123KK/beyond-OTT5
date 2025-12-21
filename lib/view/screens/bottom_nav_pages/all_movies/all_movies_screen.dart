@@ -324,9 +324,9 @@ class _AllMovieScreenState extends State<AllMovieScreen> {
                                               title,
                                               style: mulishSemiBold.copyWith(
                                                 color: Colors.white,
-                                                fontSize: 11,
+                                                fontSize: 10,
                                               ),
-                                              maxLines: 2,
+                                              maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             Row(
