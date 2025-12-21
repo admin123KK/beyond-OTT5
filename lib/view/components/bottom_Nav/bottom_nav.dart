@@ -7,13 +7,11 @@ import 'package:play_lab/core/utils/my_images.dart';
 import 'package:play_lab/data/controller/my_watch_history_controller/my_watch_history_controller.dart';
 import 'package:play_lab/data/services/api_service.dart';
 import 'package:play_lab/view/screens/account/profile/profile_screen.dart';
-
 import '../../../core/route/route.dart';
 import 'my_bottom_nav_bar_widget.dart';
 
 class CustomBottomNav extends StatefulWidget {
   final int currentIndex;
-
   const CustomBottomNav({super.key, required this.currentIndex});
 
   @override

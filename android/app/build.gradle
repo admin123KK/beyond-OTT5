@@ -17,6 +17,7 @@ def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "
 
 android {
     namespace "dev.vlab.play_lab"
+    // namespace "com.adaptant.labs.flutter_windowmanager"
     compileSdk 35
 
     // THIS FIXES ALL YOUR NDK + PLUGIN ERRORS

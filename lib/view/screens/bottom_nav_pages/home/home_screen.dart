@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen>
   String landscapeBaseUrl = "";
 
   // Tab index for category switching
-  int _selectedTabIndex = 2; // Default to "Movies"
+  int _selectedTabIndex = 0; // Default to "All"
 
   @override
   void initState() {
@@ -268,13 +268,11 @@ class _HomeScreenState extends State<HomeScreen>
                             selectedIndex: _selectedTabIndex,
                             onTabChanged: (index) {
                               setState(() => _selectedTabIndex = index);
-                              // You can add logic here to filter content based on tab
-                              // For now, we show all categories in "All" and "Movies"
                             },
                           ),
                         ),
 
-                        // Live TV Section (only show if "All" or "Live" is selected)
+                        // Live TV Section
                         if (_selectedTabIndex == 0 ||
                             _selectedTabIndex == 6) ...[
                           SliverToBoxAdapter(
@@ -283,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                           SliverToBoxAdapter(
                             child: SizedBox(
-                              height: 200,
+                              height: 180,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding:
@@ -359,19 +357,26 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ),
                           ),
+                          const SliverToBoxAdapter(
+                              child: SizedBox(
+                                  height: 20)), // Exact gap before New Releases
                         ],
 
-                        // New Releases (show for All, Movies, Web Series)
+                        // New Releases (starts closer to Live TV)
                         if (_selectedTabIndex == 0 ||
                             _selectedTabIndex == 2 ||
                             _selectedTabIndex == 3) ...[
                           SliverToBoxAdapter(
-                            child: _buildSectionHeader(
-                                "New Releases", RouteHelper.allMovieScreen),
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                  top: 0), // Reduced top padding
+                              child: _buildSectionHeader(
+                                  "New Releases", RouteHelper.allMovieScreen),
+                            ),
                           ),
                           SliverToBoxAdapter(
                             child: SizedBox(
-                              height: 240,
+                              height: 200,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding:
@@ -384,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ],
 
-                        // Trending (show for All, Movies)
+                        // Trending
                         if (_selectedTabIndex == 0 ||
                             _selectedTabIndex == 2) ...[
                           SliverToBoxAdapter(
@@ -416,7 +421,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildSectionHeader(String title, String route) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+          16, 0, 16, 8), // Reduced top padding for New Releases
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

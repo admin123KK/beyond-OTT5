@@ -33,6 +33,7 @@ class MyHttpOverrides extends HttpOverrides {
 Future<void> main() async {
   // NoScreenshot.instance.screenshotOff();
   WidgetsFlutterBinding.ensureInitialized();
+
   // 1. Google Mobile Ads
   MobileAds.instance.initialize();
 
