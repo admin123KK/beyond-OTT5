@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/Get.dart';
@@ -66,7 +67,7 @@ class _AllLiveTvScreenState extends State<AllLiveTvScreen> {
                       fontSize: 22,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              const Text("Subscribe to watch all premium live TV channels",
+              const Text("Subscribe toooo atch all premium live TV channels",
                   style: TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center),
               const SizedBox(height: 30),
